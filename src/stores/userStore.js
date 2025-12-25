@@ -21,6 +21,11 @@ export const useUserStore = defineStore('user', {
                 this.searchResults = response.data;
             } catch (err) {
                 console.error(err);
+                if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+                    authStore.logout();
+                    window.location.href = '/login';
+                    return;
+                }
                 this.error = 'Search failed';
             } finally {
                 this.loading = false;
@@ -38,6 +43,11 @@ export const useUserStore = defineStore('user', {
                 this.friends = response.data;
             } catch (err) {
                 console.error(err);
+                if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+                    authStore.logout();
+                    window.location.href = '/login';
+                    return;
+                }
                 this.error = 'Failed to load friends';
             } finally {
                 this.loading = false;
@@ -56,6 +66,11 @@ export const useUserStore = defineStore('user', {
                 // Clear search or update status? For now just refresh
             } catch (err) {
                 console.error(err);
+                if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+                    authStore.logout();
+                    window.location.href = '/login';
+                    return;
+                }
                 throw err; // Let component handle error toast/alert
             }
         },

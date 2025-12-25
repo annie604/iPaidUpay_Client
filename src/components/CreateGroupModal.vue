@@ -42,6 +42,43 @@
             </div>
           </div>
           
+          <div class="form-group members-section">
+            <label>Members:</label>
+            <div class="members-container">
+                <!-- Selected Friends (Chips) -->
+                <div v-for="friendId in form.invitedUserIds" :key="friendId" class="member-chip">
+                    <span class="member-name">{{ getFriendName(friendId) }}</span>
+                    <button type="button" class="remove-member-btn" @click="toggleFriend(friendId)">×</button>
+                </div>
+
+                <!-- Invite Button -->
+                <button type="button" class="invite-btn" @click="showFriendList = !showFriendList">
+                    Invite +
+                </button>
+            </div>
+
+            <!-- Backdrop to close dropdown on click outside -->
+            <div v-if="showFriendList" class="dropdown-backdrop" @click="showFriendList = false"></div>
+
+            <!-- Friend Selection Dropdown/List -->
+            <div v-if="showFriendList" class="friend-selection-list">
+                <div v-if="userStore.friends.length === 0" class="no-friends-msg">
+                    You have no friends yet. <router-link to="/friends">Add friends</router-link> first.
+                </div>
+                <div 
+                    v-for="friend in userStore.friends" 
+                    :key="friend.id" 
+                    class="friend-option" 
+                    :class="{ 'selected': form.invitedUserIds.includes(friend.id) }"
+                    @click="toggleFriend(friend.id)"
+                >
+                    <span class="friend-avatar-small">{{ friend.name.charAt(0).toUpperCase() }}</span>
+                    <span>{{ friend.name }} (@{{ friend.username }})</span>
+                    <span v-if="form.invitedUserIds.includes(friend.id)" class="check-mark">✓</span>
+                </div>
+            </div>
+          </div>
+          
           <div class="menu-section">
             <label>Menu (Items & Prices)</label>
             <div class="menu-table">
@@ -71,14 +108,17 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import { useUserStore } from '../stores/userStore';
 import axios from 'axios';
 
 const props = defineProps(['isOpen']);
 const emit = defineEmits(['close', 'created']);
 const authStore = useAuthStore();
+const userStore = useUserStore();
 const isLoading = ref(false);
+const showFriendList = ref(false);
 
 
 const form = reactive({
@@ -87,7 +127,8 @@ const form = reactive({
     endTime: '',
     products: [
         { name: '', price: '' }
-    ]
+    ],
+    invitedUserIds: []
 });
 
 // Format Date to YYYY-MM-DDTHH:mm string for datetime-local input
@@ -126,18 +167,25 @@ const showPicker = (event) => {
     }
 };
 
+const toggleFriend = (friendId) => {
+    const index = form.invitedUserIds.indexOf(friendId);
+    if (index === -1) {
+        form.invitedUserIds.push(friendId);
+    } else {
+        form.invitedUserIds.splice(index, 1);
+    }
+};
+
+const getFriendName = (id) => {
+    const friend = userStore.friends.find(f => f.id === id);
+    return friend ? friend.name : 'Unknown';
+};
+
 const handleSubmit = async () => {
     // Validation: End time must be later than start time
     if (new Date(form.endTime) <= new Date(form.startTime)) {
         alert("End time must be later than Start time.");
         return;
-    }
-
-    // Validation: Start time cannot be in the past (allow small buffer for form filling time of ~1 min if needed, but strict is safer)
-    if (new Date(form.startTime) < new Date(minStartTime)) {
-         // Optional: strict check, but HTML min attribute handles UI. 
-         // JS check might be annoying if user opened form 2 mins ago. 
-         // Let's rely mainly on relative check.
     }
 
     isLoading.value = true;
@@ -150,7 +198,8 @@ const handleSubmit = async () => {
             products: form.products.map(p => ({
                 name: p.name,
                 price: Number(p.price)
-            }))
+            })),
+            invitedUserIds: form.invitedUserIds
         }, {
             headers: { Authorization: `Bearer ${token}` }
         });
@@ -159,11 +208,17 @@ const handleSubmit = async () => {
         emit('close');
     } catch (error) {
         console.error("Failed to create group", error);
-        alert("Failed to create group. Please check inputs.");
+        const errorMsg = error.response?.data?.details || "Failed to create group. Please check inputs.";
+        alert(`Error: ${errorMsg}`);
     } finally {
         isLoading.value = false;
     }
 };
+
+onMounted(() => {
+    // Ensure we have the latest friends list
+    userStore.getFriends();
+});
 </script>
 
 <style scoped>
@@ -191,7 +246,7 @@ const handleSubmit = async () => {
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  border: 2px solid #333;
+  border: 2px solid #999;
   color: #000; /* Ensure text is visible in dark mode contexts */
 }
 
@@ -207,7 +262,7 @@ const handleSubmit = async () => {
 
 .modal-header {
   padding: 15px 20px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid #999;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -250,7 +305,7 @@ label {
 .input-field {
     width: 100%;
     padding: 10px;
-    border: 2px solid #333;
+    border: 2px solid #999;
     border-radius: 8px;
     font-size: 1rem;
     color: #000;
@@ -264,15 +319,143 @@ label {
 }
 
 
+/* Members Section */
+.members-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    border: 2px solid #999; /* Changed from dashed #ccc to solid #333 */
+    border-radius: 8px;
+    min-height: 50px;
+    align-items: center;
+    background: #fff; /* Ensure white background */
+}
+
+.member-chip {
+    display: flex;
+    align-items: center;
+    background: #f0f0f0;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.9rem;
+    gap: 8px;
+    border: 2px solid #999;
+    color: #333;
+}
+
+.member-name {
+    font-weight: 500;
+}
+
+.remove-member-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: #888;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.remove-member-btn:hover {
+    color: #ff4d4d;
+}
+
+.dropdown-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 50; /* Below the list but above other content */
+    cursor: default;
+    background: transparent;
+}
+
+/* ... existing styles ... */
+
+.invite-btn {
+    background: white;
+    border: 2px solid #999;
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #000; /* Force black text */
+}
+
+.invite-btn:hover {
+    background: #f0f0f0;
+}
+
+.friend-selection-list {
+    margin-top: 10px;
+    border: 2px solid #999;
+    border-radius: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 51;
+}
+
+.friend-option {
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border-bottom: 2px solid #eee;
+}
+
+.friend-option:hover {
+    background-color: #f5f5f5;
+}
+
+.friend-option.selected {
+    background-color: #fff0eb;
+    color: #ee4d2d;
+}
+
+.friend-avatar-small {
+    width: 24px;
+    height: 24px;
+    background: #ddd;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #555;
+}
+
+.check-mark {
+    margin-left: auto;
+    font-weight: bold;
+}
+
+.no-friends-msg {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+}
+
 
 .menu-section {
     margin-top: 25px;
-    border-top: 2px solid #eee;
+    border-top: 2px solid #999;
     padding-top: 20px;
 }
 
 .menu-table {
-    border: 2px solid #333;
+    border: 2px solid #999;
     border-radius: 8px;
     margin-bottom: 15px;
     overflow: hidden;
@@ -284,7 +467,7 @@ label {
     grid-template-columns: 2fr 1fr 0.5fr;
     background: #eee;
     padding: 10px;
-    border-bottom: 2px solid #333;
+    border-bottom: 2px solid #999;
     font-weight: bold;
     color: #000;
 }
@@ -294,7 +477,7 @@ label {
     grid-template-columns: 2fr 1fr 0.5fr;
     padding: 10px;
     gap: 10px; /* Increased gap */
-    border-bottom: 1px solid #ddd;
+    border-bottom: 2px solid #999;
     align-items: center;
 }
 
@@ -304,7 +487,7 @@ label {
 
 .small {
     padding: 8px; /* Slightly more padding */
-    border: 1px solid #999;
+    border: 2px solid #999;
 }
 
 .remove-btn {
@@ -325,7 +508,7 @@ label {
     width: 100%;
     padding: 12px;
     background: #eee;
-    border: 2px solid #333;
+    border: 2px solid #999;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;

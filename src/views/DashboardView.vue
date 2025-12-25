@@ -29,12 +29,14 @@
               
               <div v-if="activeMenuId === group.id" class="dropdown-menu">
                 <template v-if="group.isCreator">
-                  <div class="menu-item">Invite</div>
-                  <div class="menu-item">Edit Page</div>
-                  <div class="menu-item delete">Delete</div>
+                  <div class="menu-item" @click="openModal(group, 'invite')">Invite</div>
+                  <div class="menu-item" @click="openModal(group, 'edit')">Edit Page</div>
+                  <div class="menu-item" @click="openModal(group, 'summary')">Order Summary</div>
+                  <div class="menu-item delete" @click="deleteGroup(group.id)">Delete</div>
                 </template>
                 <template v-else>
-                  <div class="menu-item">View Details</div>
+                  <div class="menu-item" @click="openModal(group, 'detail')">View Details</div>
+                  <div class="menu-item" @click="openModal(group, 'summary')">Order Summary</div>
                 </template>
               </div>
             </div>
@@ -58,7 +60,7 @@
               <span class="price-tag">${{ group.price }}</span>
             </div>
 
-            <div class="order-summary">
+            <div class="order-summary" @click="openModal(group, 'summary')">
               <p>{{ group.itemsSummary }}</p>
               <span class="more-link">more...</span>
             </div>
@@ -69,16 +71,27 @@
            No groups found. Create one!
         </div>
       </div>
+      
+      <!-- Group Detail/Edit/Invite Modal -->
+      <GroupDetailModal 
+          v-if="selectedGroup"
+          :group="selectedGroup"
+          :mode="detailMode"
+          @close="selectedGroup = null"
+          @updated="handleGroupUpdated"
+      />
+
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import CreateGroupModal from '../components/CreateGroupModal.vue';
+import GroupDetailModal from '../components/GroupDetailModal.vue';
 import Navbar from '../components/Navbar.vue';
 
 const authStore = useAuthStore();
@@ -87,6 +100,10 @@ const groups = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const activeMenuId = ref(null);
+
+// Modal state
+const selectedGroup = ref(null);
+const detailMode = ref('detail'); // 'detail', 'edit', 'invite'
 
 const formatTime = (isoString) => {
   if (!isoString) return '';
@@ -103,6 +120,13 @@ const toggleMenu = (id) => {
   }
 };
 
+// Close menu when clicking outside
+const closeMenu = (e) => {
+    if (!e.target.closest('.menu-container')) {
+        activeMenuId.value = null;
+    }
+};
+
 const isCreateModalOpen = ref(false);
 
 const openCreateModal = () => {
@@ -111,6 +135,44 @@ const openCreateModal = () => {
 
 const handleGroupCreated = () => {
     fetchGroups(); // Refresh list
+};
+
+const openModal = (group, mode) => {
+    // We might need to fetch full group details here if 'group' from list is summary only.
+    // However, existing list seems to have enough for now?
+    // Let's rely on what we have, or fetch if needed. Use what we have for now.
+    // Ideally we should clone it to avoid mutating the list directly before save.
+    // The modal handles copying.
+    selectedGroup.value = group;
+    detailMode.value = mode;
+    activeMenuId.value = null; // Close menu
+};
+
+const handleGroupUpdated = async () => {
+    await fetchGroups();
+    // Update selectedGroup to point to the new object in the refreshed list
+    if (selectedGroup.value) {
+        const updated = groups.value.find(g => g.id === selectedGroup.value.id);
+        if (updated) {
+            selectedGroup.value = updated;
+        }
+    }
+};
+
+const deleteGroup = async (groupId) => {
+    if (!confirm("Are you sure you want to delete this group?")) return;
+    
+    try {
+        const token = authStore.token;
+        await axios.delete(`http://localhost:3001/api/groups/${groupId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchGroups();
+    } catch (err) {
+        console.error("Failed to delete group", err);
+        alert("Failed to delete group.");
+    }
+    activeMenuId.value = null;
 };
 
 // Logout logic moved to Navbar
@@ -133,12 +195,20 @@ const fetchGroups = async () => {
         groups.value = response.data.map(g => ({
             id: g.id,
             title: g.title,
+            startTime: g.startTime, // Keep original ISO for editing
+            endTime: g.endTime,     // Keep original ISO for editing
             timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
             creator: g.creator.name,
+            ownerId: g.ownerId, // Need this for permission check if isCreator not enough
             isCreator: g.isCreator,
-            participants: g.participants,
+            invites: g.invites || [], // raw invites if available
+            invitedUserIds: g.invites ? g.invites.map(i => i.userId) : [], // extracting IDs
+            participants: g.participants || [], // Just names for display? Check backend.
             price: g.myOrder ? g.myOrder.total : 0,
-            itemsSummary: g.myOrder ? g.myOrder.itemsSummary : 'You haven\'t ordered yet'
+            itemsSummary: g.myOrder ? g.myOrder.itemsSummary : 'You haven\'t ordered yet',
+            myOrder: g.myOrder, // Pass full myOrder object to modal
+            orderStats: g.orderStats || [],
+            products: g.products || []
         }));
 
     } catch (err) {
@@ -156,6 +226,11 @@ const fetchGroups = async () => {
 
 onMounted(() => {
     fetchGroups();
+    document.addEventListener('click', closeMenu);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', closeMenu);
 });
 </script>
 
@@ -288,6 +363,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.order-summary:hover {
+  background-color: #f0f0f0;
 }
 
 .more-link {
