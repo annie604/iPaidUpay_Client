@@ -1,18 +1,6 @@
 <template>
   <div class="page-wrapper">
-    <nav class="navbar">
-      <div class="brand">
-        <span class="logo-icon">🛒</span> IpaidUpay
-      </div>
-      <div class="nav-links">
-        <router-link to="/groups" class="nav-item" :class="{ 'active': $route.path === '/groups' || $route.path === '/' }">Groups</router-link>
-        <a href="#" class="nav-item">Friends</a>
-        <div class="user-profile">
-          <span class="user-name">Hi, {{ authStore.user?.name }}</span>
-          <a href="#" @click.prevent="logout" class="logout-btn">Logout</a>
-        </div>
-      </div>
-    </nav>
+    <Navbar />
 
     <div class="dashboard-container">
       <div class="action-card">
@@ -91,6 +79,7 @@ import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import CreateGroupModal from '../components/CreateGroupModal.vue';
+import Navbar from '../components/Navbar.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -124,10 +113,7 @@ const handleGroupCreated = () => {
     fetchGroups(); // Refresh list
 };
 
-const logout = () => {
-    authStore.logout();
-    router.push('/login');
-};
+// Logout logic moved to Navbar
 
 const fetchGroups = async () => {
     try {
@@ -187,68 +173,7 @@ onMounted(() => {
   flex-direction: column;
 }
 
-/* --- 2. Navbar (保持一致) --- */
-.navbar {
-  background: white;
-  padding: 15px 10%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  position: sticky; /* 讓導覽列固定在上方 */
-  top: 0;
-  z-index: 100;
-}
-
-.brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #ee4d2d; /* 品牌橘色 */
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.nav-item {
-  text-decoration: none;
-  color: #333;
-  font-weight: 500;
-}
-
-.nav-item:hover, .nav-item.active {
-  color: #ee4d2d;
-}
-
-.nav-item.active {
-  border-bottom: 2px solid #ee4d2d;
-  padding-bottom: 5px; /* Add some spacing so the border isn't too close to the text */
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-left: 1px solid #ddd;
-  padding-left: 20px;
-}
-
-.user-name {
-  color: #ee4d2d;
-  font-weight: bold;
-}
-
-.logout-btn {
-  text-decoration: none;
-  color: #999;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
+/* Navbar styles moved to Navbar component */
 
 /* --- 3. 儀表板容器 --- */
 .dashboard-container {
