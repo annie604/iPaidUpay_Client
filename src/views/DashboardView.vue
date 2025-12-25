@@ -21,6 +21,12 @@
         </button>
       </div>
 
+      <CreateGroupModal 
+        v-if="isCreateModalOpen" 
+        @close="isCreateModalOpen = false" 
+        @created="handleGroupCreated"
+      />
+
       <div v-if="loading" class="loading-state">Loading groups...</div>
       <div v-else-if="error" class="error-state">{{ error }}</div>
 
@@ -84,6 +90,7 @@ import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import CreateGroupModal from '../components/CreateGroupModal.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -107,8 +114,14 @@ const toggleMenu = (id) => {
   }
 };
 
+const isCreateModalOpen = ref(false);
+
 const openCreateModal = () => {
-  alert("跳出建立視窗功能待實作");
+  isCreateModalOpen.value = true;
+};
+
+const handleGroupCreated = () => {
+    fetchGroups(); // Refresh list
 };
 
 const logout = () => {
