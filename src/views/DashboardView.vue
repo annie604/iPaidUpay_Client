@@ -199,6 +199,7 @@ const fetchGroups = async () => {
             endTime: g.endTime,     // Keep original ISO for editing
             timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
             creator: g.creator.name,
+            creatorId: g.creator.id, // Pass ID for modal logic
             ownerId: g.ownerId, // Need this for permission check if isCreator not enough
             isCreator: g.isCreator,
             invites: g.invites || [], // raw invites if available

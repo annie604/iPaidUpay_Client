@@ -83,8 +83,10 @@
                     <label>Members:</label>
                     <div class="members-container">
                         <div v-for="userId in form.invitedUserIds" :key="userId" class="member-chip">
-                            <span class="member-name">{{ getFriendName(userId) }}</span>
-                            <button v-if="canEditSettings" type="button" class="remove-member-btn" @click="toggleFriend(userId)">×</button>
+                            <span class="member-name" :class="{ 'creator-name': group.creatorId && userId === group.creatorId }">
+                                {{ getFriendName(userId) }}
+                            </span>
+                            <button v-if="canEditSettings && !(group.creatorId && userId === group.creatorId)" type="button" class="remove-member-btn" @click="toggleFriend(userId)">×</button>
                         </div>
 
                         <button v-if="canEditSettings" type="button" class="invite-btn" @click="showFriendList = !showFriendList">
@@ -230,9 +232,7 @@
                         <span>{{ stat.quantity }}</span>
                         <span>${{ stat.totalPrice }}</span>
                         <span class="ordered-by">
-                            <span v-for="(user, uIdx) in stat.users" :key="uIdx" class="user-chip">
-                                {{ user.name }} x{{ user.qty }}
-                            </span>
+                            {{ stat.users.map(u => `${u.name} x${u.qty}`).join(', ') }}
                         </span>
                     </div>
                 </div>
@@ -612,11 +612,24 @@ const getFriendName = (id) => {
     if (id === userStore.user?.id) {
         return `${userStore.user.name} (Me)`;
     }
-    // 2. Check Friends
+
+    // 2. Check if it's the Group Creator (if info available)
+    if (props.group.creatorId && id === props.group.creatorId) {
+        // creator prop is the name string
+        return `${props.group.creator} (Host)`;
+    }
+
+    // 3. Check Friends
     const friend = userStore.friends.find(f => f.id === id);
     if (friend) return friend.name;
     
-    // 3. Fallback: Check allOrders (existing participants)
+    // 4. Check Group Invites (which now include names from server)
+    if (props.group.invites) {
+        const invite = props.group.invites.find(i => i.userId === id);
+        if (invite && invite.name) return invite.name;
+    }
+
+    // 5. Fallback: Check allOrders (existing participants - redundancy)
     if (allOrders.value) {
         const order = allOrders.value.find(o => o.userId === id);
         if (order && order.user) return order.user.name;
@@ -844,6 +857,7 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
     color: #333;
 }
 .member-name { font-weight: 500; }
+.creator-name { color: #ee4d2d; font-weight: bold; } /* Highlight Creator */
 .remove-member-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; line-height: 1; color: #888; padding: 0; display: flex; align-items: center; }
 .remove-member-btn:hover { color: #ff4d4d; }
 .invite-btn {
