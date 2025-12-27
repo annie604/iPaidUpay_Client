@@ -7,7 +7,7 @@
       </div>
 
       <!-- Tab Navigation -->
-       <div class="tabs-nav" v-if="mode === 'detail' || mode === 'summary'">
+       <div class="tabs-nav" v-if="mode === 'detail' || mode === 'summary' || mode === 'order'">
           <button 
             :class="['tab-btn', { active: activeTab === 'settings' }]" 
             @click="activeTab = 'settings'"
@@ -245,7 +245,11 @@ const isLoading = ref(false);
 const isOrderLoading = ref(false);
 const showFriendList = ref(false);
 
-const activeTab = ref(props.mode === 'summary' ? 'summary' : 'settings'); // settings, order, summary
+const activeTab = ref(
+    props.mode === 'summary' ? 'summary' : 
+    props.mode === 'order' ? 'order' : 
+    'settings'
+); // settings, order, summary
 
 // Form Data (Settings Tab)
 const form = reactive({
