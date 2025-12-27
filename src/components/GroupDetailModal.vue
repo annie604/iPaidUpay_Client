@@ -219,15 +219,21 @@
         <div v-show="activeTab === 'summary'" class="tab-content">
              <div class="summary-table-container">
                 <div class="order-table summary-table">
-                     <div class="table-header">
+                    <div class="table-header">
                         <span>Item</span>
                         <span>Total Qty</span>
                         <span>Total Amount</span>
+                        <span>Ordered By</span>
                     </div>
-                    <div v-for="(stat, idx) in groupStats" :key="idx" class="table-row">
+                    <div v-for="(stat, idx) in detailedGroupStats" :key="idx" class="table-row summary-row">
                         <span>{{ stat.name }}</span>
-                         <span>{{ stat.quantity }}</span>
+                        <span>{{ stat.quantity }}</span>
                         <span>${{ stat.totalPrice }}</span>
+                        <span class="ordered-by">
+                            <span v-for="(user, uIdx) in stat.users" :key="uIdx" class="user-chip">
+                                {{ user.name }} x{{ user.qty }}
+                            </span>
+                        </span>
                     </div>
                 </div>
                  <div class="grand-total">
@@ -434,6 +440,43 @@ const myOrderTotal = computed(() => {
     return myOrderItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 });
 
+// Calculate detailed stats from allOrders for the Summary Tab
+const detailedGroupStats = computed(() => {
+    const statsMap = {};
+
+    // 1. Initialize from existing groupStats (to get totals mostly correct instantly)
+    // But better to rebuild from allOrders for accuracy on "Ordered By"
+    if (!allOrders.value) return groupStats.value;
+
+    allOrders.value.forEach(order => {
+        if (!order.items) return;
+        const userName = order.user ? order.user.name : (order.userId === userStore.user?.id ? 'Me' : `User ${order.userId}`);
+        
+        order.items.forEach(item => {
+            if (!statsMap[item.name]) {
+                statsMap[item.name] = {
+                    name: item.name,
+                    quantity: 0,
+                    totalPrice: 0,
+                    users: [] // Array of { name, qty }
+                };
+            }
+            statsMap[item.name].quantity += item.quantity;
+            statsMap[item.name].totalPrice += item.price * item.quantity;
+            
+            // Add user to list
+            const existingUser = statsMap[item.name].users.find(u => u.name === userName);
+            if (existingUser) {
+                existingUser.qty += item.quantity;
+            } else {
+                statsMap[item.name].users.push({ name: userName, qty: item.quantity });
+            }
+        });
+    });
+
+    return Object.values(statsMap).sort((a, b) => a.name.localeCompare(b.name));
+});
+
 // Saved state for UI feedback
 const isSaved = ref(false);
 
@@ -565,8 +608,21 @@ const toggleFriend = (friendId) => {
 };
 
 const getFriendName = (id) => {
+    // 1. Check if it's Me
+    if (id === userStore.user?.id) {
+        return `${userStore.user.name} (Me)`;
+    }
+    // 2. Check Friends
     const friend = userStore.friends.find(f => f.id === id);
-    return friend ? friend.name : id; 
+    if (friend) return friend.name;
+    
+    // 3. Fallback: Check allOrders (existing participants)
+    if (allOrders.value) {
+        const order = allOrders.value.find(o => o.userId === id);
+        if (order && order.user) return order.user.name;
+    }
+    
+    return `User ${id}`; 
 };
 
 const handleSubmit = async () => {
@@ -842,8 +898,13 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .qty-input { width: 80px; }
 .add-order-btn { background: #333; color: white; border: none; border-radius: 8px; padding: 0 20px; cursor: pointer; font-weight: bold; }
 .add-order-btn:disabled { background: #999; cursor: not-allowed; }
+/* My Order Styles */
 .my-order-list .order-table { margin-top: 10px; }
-.order-table .table-header, .order-table .table-row { grid-template-columns: 2fr 1.5fr 1fr 0.5fr; } /* Adjusted for control width */
+.order-table .table-header, .order-table .table-row { 
+    grid-template-columns: 1fr 1fr 1fr 0.5fr !important; /* Equal width for first 3, smaller action */
+    justify-items: center; /* Center content horizontally */
+    align-items: center;   /* Center content vertically */
+} 
 .order-total { text-align: right; font-size: 1.2rem; font-weight: bold; margin-top: 10px; }
 
 /* Qty Control Styles */
@@ -889,10 +950,16 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .price { color: #ee4d2d; }
 .empty-msg { padding: 20px; text-align: center; color: #999; grid-column: 1 / -1; }
 
-/* Summary Styles */
-.summary-table .table-header, .summary-table .table-row { grid-template-columns: 2fr 1fr 1fr; }
+/* Summary Table Enhancements */
+.summary-table .table-header, .summary-table .table-row {
+     display: grid;
+     grid-template-columns: repeat(4, 1fr) !important; /* Force 4 columns equal width */
+     align-items: center; /* Vertically center */
+     gap: 10px;
+}
 .grand-total { font-size: 1.4rem; font-weight: bold; margin-top: 20px; text-align: right; border-top: 2px solid #999; padding-top: 15px; }
 
 /* Animations */
 
 </style>
+```
