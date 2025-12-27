@@ -7,7 +7,7 @@
       </div>
 
       <!-- Tab Navigation -->
-       <div class="tabs-nav" v-if="mode === 'detail' || mode === 'summary' || mode === 'order'">
+       <div class="modal-tabs" v-if="mode === 'detail' || mode === 'summary' || mode === 'order'">
           <button 
             :class="['tab-btn', { active: activeTab === 'settings' }]" 
             @click="activeTab = 'settings'"
@@ -796,41 +796,15 @@ onMounted(() => {
 }
 
 /* Tabs */
-.tabs-nav {
-    display: flex;
-    border-bottom: 2px solid #999; /* The "Folder" line */
-    padding: 0 20px; /* Side padding */
-    gap: 5px; /* Space between tabs */
-    background: #f0f0f0; /* Tab bar background */
-    padding-top: 10px;
+.modal-tabs {
+    display: flex; border-bottom: 2px solid #999; background: #f9f9f9;
 }
-
 .tab-btn {
-    padding: 10px 20px;
-    background: #e0e0e0;
-    border: 2px solid transparent; /* Invisible border by default to keep size */
-    border-bottom: none;
-    border-radius: 10px 10px 0 0;
-    cursor: pointer;
-    font-weight: bold;
-    color: #666;
-    position: relative;
-    top: 2px; /* Push down to overlap the container border */
-    transition: all 0.2s;
+    flex: 1; padding: 15px; background: none; border: none; font-weight: bold; color: #666;
+    cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;
 }
-
-.tab-btn.active {
-    background: white;
-    color: #ee4d2d;
-    border: 2px solid #999; /* Active border */
-    border-bottom: 2px solid white; /* White bottom to merge with content */
-    z-index: 5; /* Ensure it covers the line */
-}
-
-.tab-btn:hover:not(.active) {
-    background: #dcdcdc;
-    color: #333;
-}
+.tab-btn.active { color: #ee4d2d; border-bottom-color: #ee4d2d; background: white; }
+.tab-btn:hover:not(.active) { background: #eee; }
 
 /* Content Areas */
 .tab-content { animation: fadeIn 0.3s ease; }
