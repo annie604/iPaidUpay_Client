@@ -150,11 +150,11 @@ const openModal = (group, mode) => {
 
 const handleGroupUpdated = async () => {
     await fetchGroups();
-    // Update selectedGroup to point to the new object in the refreshed list
+    // Update selectedGroup with the fresh data from the new groups list
     if (selectedGroup.value) {
-        const updated = groups.value.find(g => g.id === selectedGroup.value.id);
-        if (updated) {
-            selectedGroup.value = updated;
+        const updatedGroup = groups.value.find(g => g.id === selectedGroup.value.id);
+        if (updatedGroup) {
+            selectedGroup.value = updatedGroup;
         }
     }
 };

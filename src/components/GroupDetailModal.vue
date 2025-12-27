@@ -52,7 +52,7 @@
                     type="text" 
                     required
                     class="input-field"
-                    :disabled="!isEditing"
+                    :disabled="!canEditSettings"
                     />
                 </div>
 
@@ -64,7 +64,7 @@
                             type="datetime-local" 
                             required 
                             class="input-field date-input"
-                            :disabled="!isEditing"
+                            :disabled="!canEditSettings"
                             @click="showPicker"
                         />
                         <span>to</span>
@@ -73,7 +73,7 @@
                             type="datetime-local" 
                             required 
                             class="input-field date-input"
-                            :disabled="!isEditing"
+                            :disabled="!canEditSettings"
                             @click="showPicker"
                         />
                     </div>
@@ -84,10 +84,10 @@
                     <div class="members-container">
                         <div v-for="userId in form.invitedUserIds" :key="userId" class="member-chip">
                             <span class="member-name">{{ getFriendName(userId) }}</span>
-                            <button v-if="isEditing || isInviteMode" type="button" class="remove-member-btn" @click="toggleFriend(userId)">×</button>
+                            <button v-if="canEditSettings" type="button" class="remove-member-btn" @click="toggleFriend(userId)">×</button>
                         </div>
 
-                        <button v-if="isEditing || isInviteMode" type="button" class="invite-btn" @click="showFriendList = !showFriendList">
+                        <button v-if="canEditSettings" type="button" class="invite-btn" @click="showFriendList = !showFriendList">
                             Invite +
                         </button>
                     </div>
@@ -122,17 +122,30 @@
                             <span v-if="isEditing">Action</span>
                         </div>
                         <div v-for="(item, index) in form.products" :key="index" class="table-row">
-                            <input v-model="item.name" type="text" placeholder="Item" required class="input-field small" :disabled="!isEditing" />
-                            <input v-model.number="item.price" type="number" placeholder="$" required class="input-field small" :disabled="!isEditing" />
-                            <button v-if="isEditing" type="button" @click="removeProduct(index)" class="remove-btn">&times;</button>
+                            <input v-model="item.name" type="text" placeholder="Item" required class="input-field small" :disabled="!canEditSettings" />
+                            <input v-model.number="item.price" type="number" placeholder="$" required class="input-field small" :disabled="!canEditSettings" />
+                            <button 
+                                v-if="canEditSettings" 
+                                type="button" 
+                                @click="removeProduct(index)" 
+                                class="remove-btn"
+                                :disabled="isProductInUse(item.name)"
+                                :title="isProductInUse(item.name) ? 'Cannot delete: Item is currently ordered by a member' : 'Remove Item'"
+                            >
+                                &times;
+                            </button>
                         </div>
                     </div>
-                    <button v-if="isEditing" type="button" @click="addProduct" class="add-btn">+ Add Item</button>
+                    <button v-if="canEditSettings" type="button" @click="addProduct" class="add-btn">+ Add Item</button>
                 </div>
 
-                <div class="form-actions" v-if="isEditing || isInviteMode">
+                <div class="form-actions" v-if="canEditSettings">
                     <button type="submit" class="submit-btn" :disabled="isLoading">
-                        {{ isLoading ? 'Saving...' : 'Save Changes' }}
+                        {{ 
+                            isLoading ? 'Saving...' : 
+                            isSettingsSaved ? 'Saved!' :
+                            isSettingsDirty ? 'Save Changes' : 'Up to date'
+                        }}
                     </button>
                 </div>
             </form>
@@ -225,6 +238,8 @@
 
       </div>
     </div>
+    <!-- Loading overlay if fetching full details -->
+    <div v-if="isLoadingSummary" class="loading-overlay">Loading details...</div>
   </div>
 </template>
 
@@ -243,6 +258,7 @@ const authStore = useAuthStore();
 const userStore = useUserStore();
 const isLoading = ref(false);
 const isOrderLoading = ref(false);
+const isLoadingSummary = ref(false);
 const showFriendList = ref(false);
 
 const activeTab = ref(
@@ -259,6 +275,8 @@ const form = reactive({
     products: [],
     invitedUserIds: []
 });
+const originalForm = ref(null); 
+const isSettingsSaved = ref(false);
 
 // My Order Data
 const selectedProductIndex = ref(-1);
@@ -283,6 +301,9 @@ watch(() => props.group, (newGroup) => {
         form.products = newGroup.products ? JSON.parse(JSON.stringify(newGroup.products)) : []; 
         form.invitedUserIds = newGroup.invitedUserIds ? [...newGroup.invitedUserIds] : [];
         
+        // Save initial state for dirty checking
+        originalForm.value = JSON.parse(JSON.stringify(form));
+
         // 2. My Order Data
         if (newGroup.myOrder && newGroup.myOrder.items) {
              const items = newGroup.myOrder.items.map(i => ({
@@ -318,6 +339,12 @@ watch(() => props.group, (newGroup) => {
 const isEditing = computed(() => props.mode === 'edit');
 const isInviteMode = computed(() => props.mode === 'invite');
 const isCreator = computed(() => props.group.isCreator);
+const canEditSettings = computed(() => isCreator.value || isEditing.value || isInviteMode.value);
+
+const isSettingsDirty = computed(() => {
+    if (!originalForm.value) return false;
+    return JSON.stringify(form) !== JSON.stringify(originalForm.value);
+});
 
 const modalTitle = computed(() => {
     if (props.mode === 'edit') return 'Edit Group';
@@ -505,11 +532,24 @@ const showPicker = (event) => {
     } catch (error) {}
 };
 
+const isProductInUse = (productName) => {
+    if (!productName || !allOrders.value || allOrders.value.length === 0) return false;
+    // Check if any order contains an item with this name
+    return allOrders.value.some(order => 
+        order.items && order.items.some(item => item.name === productName)
+    );
+};
+
 const addProduct = () => {
-    form.products.push({ name: '', price: '' });
+    form.products.push({ name: '', price: null });
 };
 
 const removeProduct = (index) => {
+    const product = form.products[index];
+    if (isProductInUse(product.name)) {
+        alert(`Cannot delete "${product.name}" because it is currently included in an order.`);
+        return;
+    }
     if (form.products.length > 1) {
         form.products.splice(index, 1);
     }
@@ -530,10 +570,13 @@ const getFriendName = (id) => {
 };
 
 const handleSubmit = async () => {
+    if (!isSettingsDirty.value) return;
+    
     isLoading.value = true;
+    isSettingsSaved.value = false;
     try {
         const token = authStore.token;
-        await axios.put(`http://localhost:3001/api/groups/${props.group.id}`, {
+        const response = await axios.put(`http://localhost:3001/api/groups/${props.group.id}`, {
             title: form.title,
             startTime: new Date(form.startTime).toISOString(),
             endTime: new Date(form.endTime).toISOString(),
@@ -547,8 +590,20 @@ const handleSubmit = async () => {
             headers: { Authorization: `Bearer ${token}` }
         });
         
+        // Sync products from server response (to get new IDs)
+        if (response.data.products) {
+            form.products = JSON.parse(JSON.stringify(response.data.products));
+        }
+
         emit('updated');
-        emit('close');
+        
+        // Update originalForm with the synced data
+        originalForm.value = JSON.parse(JSON.stringify(form));
+        
+        isSettingsSaved.value = true;
+        setTimeout(() => isSettingsSaved.value = false, 3000);
+        
+        // emit('close'); // Don't close, allow continued editing
     } catch (error) {
         console.error("Failed to update group", error);
         alert("Failed to update group.");
@@ -614,8 +669,16 @@ const refreshGroupSummary = async (updateLocalOrder = true) => {
         
     } catch (error) {
         console.error('Failed to refresh group summary:', error);
+    } finally {
+        isLoadingSummary.value = false;
     }
 };
+
+onMounted(() => {
+    // We need full order details (allOrders) to perform validation like "isProductInUse".
+    // The prop 'group' from dashboard only has limited info.
+    refreshGroupSummary(false);
+});
 
 // Auto-refresh summary when switching to summary tab
 watch(activeTab, (newTab) => {
@@ -757,6 +820,7 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .table-row:last-child { border-bottom: none; }
 .small { padding: 8px; border: 2px solid #999; }
 .remove-btn { background: #ff4d4d; color: white; border: none; border-radius: 4px; cursor: pointer; height: 30px; width: 30px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.remove-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
 .add-btn { width: 100%; padding: 12px; background: #eee; border: 2px solid #999; border-radius: 8px; cursor: pointer; font-weight: bold; color: #000; }
 .add-btn:hover { background: #ddd; }
 .add-btn { width: 100%; padding: 12px; background: #eee; border: 2px solid #999; border-radius: 8px; cursor: pointer; font-weight: bold; color: #000; }
