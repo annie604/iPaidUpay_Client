@@ -65,8 +65,12 @@ import { reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
+
+import { useToastStore } from '../stores/toastStore';
+
 const router = useRouter();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 const form = reactive({
   id: '',
@@ -78,11 +82,11 @@ const handleRegister = async () => {
   try {
     // using authStore instead of direct fetch to maintain consistency
     await authStore.register(form.id, form.passwd, form.name);
-    alert('註冊成功！請使用新帳號重新登入。');
+    toastStore.addToast('註冊成功！請使用新帳號重新登入。', "success");
     router.push('/login'); 
   } catch (error) {
     console.error('連線錯誤', error);
-    alert(error.error || error.message || '系統發生錯誤，請稍後再試');
+    toastStore.addToast(error.error || error.message || '系統發生錯誤，請稍後再試', "error");
   }
 };
 </script>

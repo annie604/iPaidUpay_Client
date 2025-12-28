@@ -65,8 +65,12 @@ import { reactive, ref } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 
+
+import { useToastStore } from '../stores/toastStore';
+
 const router = useRouter();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 // Loading state
 const isLoading = ref(false);
@@ -86,7 +90,7 @@ const handleLogin = async () => {
   try {
     await authStore.login(form.id, form.passwd);
     
-    alert('登入成功！'); // Notify user of success
+    toastStore.addToast("登入成功！", "success"); // Notify user of success
 
     // Redirect to home page
     router.push('/');  
@@ -97,10 +101,11 @@ const handleLogin = async () => {
     // Assuming 401 means invalid credentials
     if (error.response?.status === 401) {
        passwordError.value = true;
+       toastStore.addToast("帳號或密碼錯誤", "error");
     } else {
         // Robust error message handling
         const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || '登入失敗，請稍後再試';
-        alert(errorMsg);
+        toastStore.addToast(errorMsg, "error");
     }
 
   } finally {

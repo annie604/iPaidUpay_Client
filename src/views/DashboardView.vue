@@ -91,6 +91,9 @@ import axios from 'axios';
 import CreateGroupModal from '../components/CreateGroupModal.vue';
 import GroupDetailModal from '../components/GroupDetailModal.vue';
 import Navbar from '../components/Navbar.vue';
+import { useToastStore } from '../stores/toastStore';
+
+const toastStore = useToastStore();
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -158,18 +161,23 @@ const handleGroupUpdated = async () => {
 };
 
 const deleteGroup = async (groupId) => {
-    if (!confirm("Are you sure you want to delete this group? This will permanently remove all data from the database.")) return;
+    const confirmed = await toastStore.showConfirm(
+        "Delete Group", 
+        "Are you sure you want to delete this group? This will permanently remove all data from the database."
+    );
+    if (!confirmed) return;
     
     try {
         const token = authStore.token;
         await axios.delete(`http://localhost:3001/api/groups/${groupId}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
+        toastStore.addToast("Group deleted successfully", "success");
         fetchGroups();
     } catch (err) {
         console.error("Failed to delete group", err);
         const errorMsg = err.response?.data?.error || "Failed to delete group.";
-        alert(errorMsg);
+        toastStore.addToast(errorMsg, "error");
     }
     activeMenuId.value = null;
 };

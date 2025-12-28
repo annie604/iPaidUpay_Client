@@ -296,6 +296,7 @@
 import { reactive, ref, onMounted, computed, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useUserStore } from '../stores/userStore';
+import { useToastStore } from '../stores/toastStore';
 import axios from 'axios';
 
 const props = defineProps({
@@ -305,6 +306,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'updated']);
 const authStore = useAuthStore();
 const userStore = useUserStore();
+const toastStore = useToastStore();
 const isLoading = ref(false);
 const isOrderLoading = ref(false);
 const isLoadingSummary = ref(false);
@@ -809,9 +811,16 @@ const togglePaymentStatus = async (order) => {
         // Update local state immediately
         order.paymentStatus = newStatus;
 
-    } catch (error) {
-        console.error("Failed to update payment status", error);
-        alert("Failed to update status.");
+        if (newStatus === 'PAID') {
+            toastStore.addToast("Payment marked as PAID", "success");
+        } else {
+            toastStore.addToast("Payment marked as UNPAID", "info");
+        }
+
+    } catch (err) {
+        console.error("Failed to toggle payment status", err);
+        const errorMsg = err.response?.data?.error || "Failed to update payment status";
+        toastStore.addToast(errorMsg, "error");
     } finally {
         isStatusUpdating.value = false;
     }

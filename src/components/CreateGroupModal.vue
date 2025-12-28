@@ -226,12 +226,14 @@
 import { reactive, ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useUserStore } from '../stores/userStore';
+import { useToastStore } from '../stores/toastStore';
 import axios from 'axios';
 
 const props = defineProps(['isOpen']);
 const emit = defineEmits(['close', 'created']);
 const authStore = useAuthStore();
 const userStore = useUserStore();
+const toastStore = useToastStore();
 
 const isLoading = ref(false);
 const showFriendList = ref(false);
@@ -359,19 +361,19 @@ const localGroupStats = computed(() => {
 const handleSubmit = async () => {
     // Validation
     if (!form.title) {
-        alert("Please enter a group name.");
+        toastStore.addToast("Please enter a group name.", "error");
         activeTab.value = 'settings';
         return;
     }
     if (new Date(form.endTime) <= new Date(form.startTime)) {
-        alert("End time must be later than Start time.");
+        toastStore.addToast("End time must be later than Start time.", "error");
         activeTab.value = 'settings';
         return;
     }
     // Check valid products
     const validProducts = form.products.filter(p => p.name && p.price);
     if (validProducts.length === 0) {
-        alert("Please add at least one valid product to the menu.");
+        toastStore.addToast("Please add at least one valid product to the menu.", "error");
         activeTab.value = 'settings';
         return;
     }
@@ -397,10 +399,11 @@ const handleSubmit = async () => {
         
         emit('created');
         emit('close');
+        toastStore.addToast("Group created successfully!", "success");
     } catch (error) {
         console.error("Failed to create group", error);
         const errorMsg = error.response?.data?.details || "Failed to create group. Please check inputs.";
-        alert(`Error: ${errorMsg}`);
+        toastStore.addToast(errorMsg, "error");
     } finally {
         isLoading.value = false;
     }
