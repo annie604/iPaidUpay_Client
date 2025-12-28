@@ -194,7 +194,7 @@ const deleteGroup = async (groupId) => {
     
     try {
         const token = authStore.token;
-        await axios.delete(`http://localhost:3001/api/groups/${groupId}`, {
+        await axios.delete(`/api/groups/${groupId}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         toastStore.addToast("Group deleted successfully", "success");
@@ -228,7 +228,7 @@ const toggleGroupStatus = async (group) => {
         const oldStatus = group.status;
         group.status = newStatus;
 
-        await axios.put(`http://localhost:3001/api/groups/${group.id}/status`, {
+        await axios.put(`/api/groups/${group.id}/status`, {
              status: newStatus
         }, {
              headers: { Authorization: `Bearer ${token}` }
@@ -256,7 +256,7 @@ const fetchGroups = async () => {
             return;
         }
 
-        const response = await axios.get('http://localhost:3001/api/groups', {
+        const response = await axios.get('/api/groups', {
             headers: {
                 Authorization: `Bearer ${token}`
             }

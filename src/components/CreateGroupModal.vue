@@ -382,7 +382,7 @@ const handleSubmit = async () => {
     isLoading.value = true;
     try {
         const token = authStore.token;
-        await axios.post('http://localhost:3001/api/groups', {
+        await axios.post('/api/groups', {
             title: form.title,
             startTime: new Date(form.startTime).toISOString(),
             endTime: new Date(form.endTime).toISOString(),

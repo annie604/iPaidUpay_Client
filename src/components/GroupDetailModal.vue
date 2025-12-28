@@ -591,7 +591,7 @@ const submitOrder = async (showNotification = true) => {
     isSaved.value = false;
     try {
         const token = authStore.token;
-        const response = await axios.post('http://localhost:3001/api/orders', {
+        const response = await axios.post('/api/orders', {
             groupId: props.group.id,
             items: myOrderItems.value
         }, {
@@ -689,7 +689,7 @@ const toggleGroupStatus = async () => {
     localStatus.value = newStatus;
     
     try {
-        const response = await axios.put(`http://localhost:3001/api/groups/${props.group.id}/status`, {
+        const response = await axios.put(`/api/groups/${props.group.id}/status`, {
              status: newStatus
         }, {
              headers: { Authorization: `Bearer ${authStore.token}` }
@@ -819,7 +819,7 @@ const handleSubmit = async () => {
     isSettingsSaved.value = false;
     try {
         const token = authStore.token;
-        const response = await axios.put(`http://localhost:3001/api/groups/${props.group.id}`, {
+        const response = await axios.put(`/api/groups/${props.group.id}`, {
             title: form.title,
             startTime: new Date(form.startTime).toISOString(),
             endTime: new Date(form.endTime).toISOString(),
@@ -859,7 +859,7 @@ const handleSubmit = async () => {
 const refreshGroupSummary = async (updateLocalOrder = true) => {
     try {
         const token = authStore.token;
-        const response = await axios.get(`http://localhost:3001/api/orders/group/${props.group.id}/summary`, {
+        const response = await axios.get(`/api/orders/group/${props.group.id}/summary`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -925,7 +925,7 @@ const togglePaymentStatus = async (order) => {
 
     try {
         const token = authStore.token;
-        await axios.put(`http://localhost:3001/api/orders/${order.id}/payment-status`, {
+        await axios.put(`/api/orders/${order.id}/payment-status`, {
             status: newStatus
         }, {
              headers: { Authorization: `Bearer ${token}` }

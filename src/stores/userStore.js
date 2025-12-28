@@ -15,7 +15,7 @@ export const useUserStore = defineStore('user', {
             this.error = null;
             const authStore = useAuthStore();
             try {
-                const response = await axios.get(`http://localhost:3001/api/users/search?q=${query}`, {
+                const response = await axios.get(`/api/users/search?q=${query}`, {
                     headers: { Authorization: `Bearer ${authStore.token}` }
                 });
                 this.searchResults = response.data;
@@ -37,7 +37,7 @@ export const useUserStore = defineStore('user', {
             this.error = null;
             const authStore = useAuthStore();
             try {
-                const response = await axios.get('http://localhost:3001/api/users/friends', {
+                const response = await axios.get('/api/users/friends', {
                     headers: { Authorization: `Bearer ${authStore.token}` }
                 });
                 this.friends = response.data;
@@ -57,7 +57,7 @@ export const useUserStore = defineStore('user', {
         async addFriend(friendId) {
             const authStore = useAuthStore();
             try {
-                await axios.post('http://localhost:3001/api/users/friends',
+                await axios.post('/api/users/friends',
                     { friendId },
                     { headers: { Authorization: `Bearer ${authStore.token}` } }
                 );
