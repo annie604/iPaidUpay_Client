@@ -226,4 +226,24 @@ const handleRegister = async () => {
 * {
     box-sizing: border-box;
 }
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 15px 5%;
+    }
+    
+    .login-container {
+        margin-top: 30px;
+        padding: 0 15px;
+    }
+    
+    .login-card {
+        padding: 30px 20px;
+    }
+    
+    .card-header h2 {
+        font-size: 1.3rem;
+    }
+}
 </style>

@@ -584,6 +584,66 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
      gap: 10px;
 }
 .grand-total { font-size: 1.4rem; font-weight: bold; margin-top: 20px; text-align: right; border-top: 2px solid #999; padding-top: 15px; }
-.summary-note { margin-top: 10px; font-style: italic; color: #666; text-align: right; font-size: 0.9rem; }
+.summary-note { margin-top: 10px; font-style: italic; color: #666; text-align: right; font-size: 0.9rem; 
+}
 .ordered-by { font-size: 0.9rem; color: #555; }
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .modal-card {
+        width: 95%;
+        height: 90vh;
+        max-width: none;
+    }
+    
+    .modal-header {
+        padding: 10px 15px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .modal-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .tab-btn {
+        padding: 12px 10px;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+    
+    .time-inputs {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .time-inputs .input-field {
+        width: 100%;
+    }
+    
+    .table-header, .table-row {
+        gap: 5px;
+        font-size: 0.9rem;
+        padding: 8px 5px;
+    }
+    
+    .member-chip {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+    
+    .order-selection-area .selection-row {
+        flex-direction: column;
+    }
+    
+    .order-selection-area .input-field,
+    .order-selection-area .add-order-btn {
+        width: 100%;
+    }
+}
 </style>

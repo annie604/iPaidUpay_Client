@@ -211,7 +211,8 @@
 
             <div class="form-actions">
                 <div class="last-updated" v-if="formattedLastUpdated">
-                    Last updated: {{ formattedLastUpdated }}
+                    Last updated: <br>
+                    {{ formattedLastUpdated }}
                 </div>
                 <button type="button" class="submit-btn" :disabled="isOrderLoading" @click="submitOrder">
                     {{ 
@@ -1030,30 +1031,33 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 }
 .grand-total { font-size: 1.4rem; font-weight: bold; margin-top: 20px; text-align: right; border-top: 2px solid #999; padding-top: 15px; }
 
+/* Modal Footer (Standardized) */
+.modal-footer {
+    padding: 15px 20px; border-top: 2px solid #999; background: #fff; 
+    display: flex; justify-content: flex-end; align-items: center; gap: 15px;
+}
+
+.save-btn {
+    background: #ee4d2d; color: white; padding: 8px 20px; /* Reduced padding */
+    border: none; border-radius: 5px; font-weight: bold; cursor: pointer;
+    font-size: 1rem; /* Slightly smaller font */
+}
+.save-btn:disabled { background: #ccc; cursor: not-allowed; }
+.save-btn:hover:not(:disabled) { background: #d73211; }
+
+.status-badge {
+    padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;
+}
+.status-badge.paid { background-color: #d4edda; color: #155724; }
+.status-badge.unpaid { background-color: #f8d7da; color: #721c24; }
+
 .status-btn {
-    padding: 5px 15px;
-    border-radius: 15px;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    min-width: 80px;
+    padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; cursor: pointer; border: 1px solid transparent; width: 70px;
 }
-.status-btn.paid {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-.status-btn.unpaid {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-.status-btn:disabled {
-    cursor: default;
-    opacity: 0.8;
-}
+.status-btn.paid { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+.status-btn.unpaid { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+.status-btn.disabled { opacity: 0.7; cursor: default; }
+
 .creator-tag {
     font-size: 0.8rem;
     color: #ee4d2d;

@@ -476,4 +476,41 @@ onUnmounted(() => {
 .error-state {
     color: #ee4d2d;
 }
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+  .dashboard-container {
+      margin: 20px auto;
+      padding: 0 15px;
+      gap: 20px;
+  }
+  
+  .group-card {
+      padding: 15px 20px;
+  }
+  
+  .card-header {
+      flex-direction: row;
+      align-items: center;
+  }
+  
+  .group-title {
+      font-size: 1.2rem;
+  }
+  
+  .label {
+      width: 80px; 
+      min-width: 80px;
+      font-size: 0.9rem;
+  }
+  
+  .value, .price-tag {
+      font-size: 0.95rem;
+  }
+  
+  .create-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+  }
+}
 </style>
