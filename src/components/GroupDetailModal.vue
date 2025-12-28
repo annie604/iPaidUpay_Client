@@ -449,7 +449,7 @@ const modalTitle = computed(() => {
     return props.group.title || 'Group Details';
 });
 
-// --- Tab 2 Logic: My Order ---
+
 // --- Tab 2 Logic: My Order ---
 const addToMyOrder = () => {
     if (selectedProductIndex.value === -1) return;
@@ -472,8 +472,14 @@ const addToMyOrder = () => {
 
 };
 
-const removeFromMyOrder = (index) => {
-    if (confirm("Are you sure you want to remove this item?")) {
+const removeFromMyOrder = async (index) => {
+    const item = myOrderItems.value[index];
+    const confirmed = await toastStore.showConfirm(
+        "Remove Item", 
+        `Are you sure you want to remove "${item.name}"?`
+    );
+
+    if (confirmed) {
         myOrderItems.value.splice(index, 1);
     }
 };
@@ -482,21 +488,29 @@ const increaseQty = (index) => {
     myOrderItems.value[index].quantity++;
 };
 
-const decreaseQty = (index) => {
+const decreaseQty = async (index) => {
     if (myOrderItems.value[index].quantity > 1) {
         myOrderItems.value[index].quantity--;
     } else {
         // Notify user about deletion
-        if (confirm("Quantity is 0. Do you want to remove this item?")) {
+        const confirmed = await toastStore.showConfirm(
+            "Remove Item", 
+            "Quantity is 0. Do you want to remove this item?"
+        );
+        if (confirmed) {
             myOrderItems.value.splice(index, 1);
         }
     }
 };
 
-const handleQtyChange = (index) => {
+const handleQtyChange = async (index) => {
     const qty = myOrderItems.value[index].quantity;
     if (qty <= 0) {
-        if (confirm("Quantity is 0. Do you want to remove this item?")) {
+        const confirmed = await toastStore.showConfirm(
+            "Remove Item", 
+            "Quantity is 0. Do you want to remove this item?"
+        );
+        if (confirmed) {
              myOrderItems.value.splice(index, 1);
         } else {
             myOrderItems.value[index].quantity = 1; // Reset to 1 if user cancels
