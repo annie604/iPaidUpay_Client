@@ -53,14 +53,14 @@
               <span class="label">With:</span>
               <span class="value">{{ group.participants.join(', ') }}</span>
             </div>
-            <div class="info-row price-row" @click.stop="openModal(group, 'summary')">
-              <span class="label">Total Price:</span>
-              <span class="price-tag">${{ group.price }}</span>
-            </div>
-
             <div class="order-summary" @click.stop="openModal(group, 'order')">
               <p>{{ group.itemsSummary }}</p>
               <span class="more-link">more...</span>
+            </div>
+
+            <div class="info-row price-row" @click.stop="openModal(group, 'summary')">
+              <span class="label">Total Price:</span>
+              <span class="price-tag">${{ group.price }}</span>
             </div>
           </div>
         </div>
@@ -211,9 +211,10 @@ const fetchGroups = async () => {
             isCreator: g.isCreator,
             invites: g.invites || [], // raw invites if available
             invitedUserIds: g.invites ? g.invites.map(i => i.userId) : [], // extracting IDs
-            participants: g.participants || [], // Just names for display? Check backend.
+            // Filter out creator from participants list for display
+            participants: (g.participants || []).filter(p => p !== g.creator.name),
             price: g.totalGroupAmount,
-            itemsSummary: g.myOrder ? g.myOrder.itemsSummary : 'You haven\'t ordered yet',
+            itemsSummary: (g.myOrder && g.myOrder.itemsSummary) ? g.myOrder.itemsSummary : 'You haven\'t ordered yet',
             myOrder: g.myOrder, // Pass full myOrder object to modal
             orderStats: g.orderStats || [],
             products: g.products || []
@@ -266,7 +267,13 @@ onUnmounted(() => {
   padding: 0 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 20px; /* Increased from 20px */
+}
+
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* --- 4. 建立按鈕區塊 (Action Card) --- */
@@ -347,15 +354,17 @@ onUnmounted(() => {
 /* 卡片內容區 */
 .info-row {
   display: flex;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   color: #555;
   font-size: 0.95rem;
 }
 
 .label {
   font-weight: bold;
-  width: 80px; /* 固定標籤寬度 */
+  width: 100px; /* Increased width */
+  min-width: 100px; /* Ensure min width */
   color: #888;
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 .highlight {
@@ -364,7 +373,7 @@ onUnmounted(() => {
 }
 
 .price-row {
-  margin-top: 10px;
+  margin-top: 20px; /* Increase spacing */
   align-items: center;
 }
 
