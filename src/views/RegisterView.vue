@@ -2,7 +2,7 @@
   <div class="page-wrapper">
     <nav class="navbar">
       <div class="brand">
-        <span class="logo-icon">🛒</span> IpaidUpay
+        <img src="/icon.png" alt="Logo" class="logo-icon" style="height: 2.5rem; width: auto;" /> IpaidUpay
       </div>
       <div class="nav-links">
         <router-link to="/login">返回登入</router-link>

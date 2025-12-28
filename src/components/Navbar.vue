@@ -1,7 +1,7 @@
 <template>
     <nav class="navbar" ref="navbarRef">
       <div class="brand">
-        <span class="logo-icon">🛒</span> IpaidUpay
+        <img src="/icon.png" alt="Logo" class="logo-icon" style="height: 2.5rem; width: auto;" /> IpaidUpay
       </div>
       
       <button class="hamburger-btn" @click="isMenuOpen = !isMenuOpen">
