@@ -28,16 +28,14 @@
               <button class="menu-dots" @click="toggleMenu(group.id)">⋮</button>
               
               <div v-if="activeMenuId === group.id" class="dropdown-menu">
-                <template v-if="group.isCreator">
-                  <div class="menu-item" @click="openModal(group, 'invite')">Invite</div>
-                  <div class="menu-item" @click="openModal(group, 'edit')">Edit Page</div>
-                  <div class="menu-item" @click="openModal(group, 'summary')">Order Summary</div>
-                  <div class="menu-item delete" @click="deleteGroup(group.id)">Delete</div>
-                </template>
-                <template v-else>
-                  <div class="menu-item" @click="openModal(group, 'detail')">View Details</div>
-                  <div class="menu-item" @click="openModal(group, 'summary')">Order Summary</div>
-                </template>
+                  <div class="menu-item" @click="openModal(group, 'detail')">View Detail</div>
+                  <div 
+                    class="menu-item delete" 
+                    :class="{ 'disabled': !group.isCreator }"
+                    @click="group.isCreator ? deleteGroup(group.id) : null"
+                  >
+                    Delete
+                  </div>
               </div>
             </div>
           </div>
@@ -160,7 +158,7 @@ const handleGroupUpdated = async () => {
 };
 
 const deleteGroup = async (groupId) => {
-    if (!confirm("Are you sure you want to delete this group?")) return;
+    if (!confirm("Are you sure you want to delete this group? This will permanently remove all data from the database.")) return;
     
     try {
         const token = authStore.token;
@@ -170,7 +168,8 @@ const deleteGroup = async (groupId) => {
         fetchGroups();
     } catch (err) {
         console.error("Failed to delete group", err);
-        alert("Failed to delete group.");
+        const errorMsg = err.response?.data?.error || "Failed to delete group.";
+        alert(errorMsg);
     }
     activeMenuId.value = null;
 };
@@ -440,6 +439,16 @@ onUnmounted(() => {
 .menu-item.delete {
   border-top: 1px solid #eee;
   color: #d73211;
+}
+
+.menu-item.disabled {
+    color: #ccc;
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+}
+.menu-item.disabled:hover {
+    color: #ccc;
+    background-color: #f9f9f9;
 }
 
 .loading-state, .error-state, .empty-state {
