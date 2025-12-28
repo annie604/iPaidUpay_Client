@@ -62,8 +62,10 @@
 import { ref, onMounted } from 'vue';
 import Navbar from '../components/Navbar.vue';
 import { useUserStore } from '../stores/userStore';
+import { useToastStore } from '../stores/toastStore';
 
 const userStore = useUserStore();
+const toastStore = useToastStore();
 const searchQuery = ref('');
 let debounceTimer = null;
 
@@ -83,11 +85,11 @@ const handleInput = () => {
 const addFriend = async (id) => {
     try {
         await userStore.addFriend(id);
-        alert('Friend added!');
+        toastStore.addToast('Friend added!', 'success');
         searchQuery.value = '';
         userStore.clearSearch();
     } catch (err) {
-        alert(err.response?.data?.error || 'Failed to add friend');
+        toastStore.addToast(err.response?.data?.error || 'Failed to add friend', 'error');
     }
 };
 

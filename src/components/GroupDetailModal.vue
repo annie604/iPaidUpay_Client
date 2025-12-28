@@ -615,7 +615,7 @@ const submitOrder = async (showNotification = true) => {
 
     } catch (error) {
         console.error("Order submit failed", error);
-        alert("Failed to update order. Please try again.");
+        toastStore.addToast("Failed to update order. Please try again.", "error");
     } finally {
         isOrderLoading.value = false;
     }
@@ -835,7 +835,7 @@ const handleSubmit = async () => {
         // emit('close'); // Don't close, allow continued editing
     } catch (error) {
         console.error("Failed to update group", error);
-        alert("Failed to update group.");
+        toastStore.addToast("Failed to update group.", "error");
     } finally {
         isLoading.value = false;
     }
