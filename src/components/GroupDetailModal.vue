@@ -64,7 +64,34 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Time:</label>
+                    <div class="time-label-row">
+                        <label>Time:</label>
+                        <!-- Status Badge and Toggle -->
+                        <div class="status-control" v-if="mode !== 'create'">
+                            <!-- Creator View: Clickable Button -->
+                             <button 
+                                v-if="isCreator" 
+                                type="button" 
+                                class="status-toggle-pill-dashboard"
+                                :class="{ 'open': localStatus === 'OPEN', 'closed': localStatus === 'CLOSED' }"
+                                @click="toggleGroupStatus"
+                                :disabled="isStatusUpdating"
+                                title="Click to toggle status"
+                            >
+                                {{ localStatus === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                            </button>
+
+                            <!-- Member View: Static Badge -->
+                            <span 
+                                v-else
+                                class="status-toggle-pill-dashboard" 
+                                :class="{ 'open': localStatus === 'OPEN', 'closed': localStatus === 'CLOSED' }"
+                                style="cursor: default;"
+                            >
+                                {{ localStatus === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                            </span>
+                        </div>
+                    </div>
                     <div class="time-inputs">
                         <input 
                             v-model="form.startTime" 
@@ -165,14 +192,14 @@
             <div class="order-selection-area">
                 <label>Add Item:</label>
                 <div class="selection-row">
-                    <select v-model="selectedProductIndex" class="input-field">
+                    <select v-model="selectedProductIndex" class="input-field" :disabled="isOrderLocked">
                         <option :value="-1" disabled>Select Item...</option>
                         <option v-for="(prod, idx) in form.products" :key="idx" :value="idx">
                             {{ prod.name }} (${{ prod.price }})
                         </option>
                     </select>
-                    <input v-model.number="orderQuantity" type="number" min="1" class="input-field qty-input" placeholder="Qty" />
-                    <button type="button" class="add-order-btn" @click="addToMyOrder" :disabled="selectedProductIndex === -1">Add</button>
+                    <input v-model.number="orderQuantity" type="number" min="1" class="input-field qty-input" placeholder="Qty" :disabled="isOrderLocked" />
+                    <button type="button" class="add-order-btn" @click="addToMyOrder" :disabled="selectedProductIndex === -1 || isOrderLocked">Add</button>
                 </div>
             </div>
 
@@ -190,17 +217,18 @@
                         <span>{{ item.name }}</span>
                         <!-- Qty with - + controls -->
                         <div class="qty-control">
-                            <button type="button" class="qty-btn" @click="decreaseQty(idx)">-</button>
+                            <button type="button" class="qty-btn" @click="decreaseQty(idx)" :disabled="isOrderLocked">-</button>
                             <input 
                                 v-model.number="item.quantity" 
                                 type="text" 
                                 class="qty-input-small" 
                                 @change="handleQtyChange(idx)"
+                                :disabled="isOrderLocked"
                             />
-                            <button type="button" class="qty-btn" @click="increaseQty(idx)">+</button>
+                            <button type="button" class="qty-btn" @click="increaseQty(idx)" :disabled="isOrderLocked">+</button>
                         </div>
                         <span>${{ item.price * item.quantity }}</span>
-                        <button type="button" class="remove-btn" @click="removeFromMyOrder(idx)">&times;</button>
+                        <button type="button" class="remove-btn" @click="removeFromMyOrder(idx)" :disabled="isOrderLocked">&times;</button>
                     </div>
                 </div>
                 <div class="order-total">
@@ -214,14 +242,14 @@
                     Last updated: <br>
                     {{ formattedLastUpdated }}
                 </div>
-                <button type="button" class="submit-btn" :disabled="isOrderLoading" @click="submitOrder">
+                <!-- REMOVED locked-msg -->
+                <button type="button" class="submit-btn" :disabled="isOrderLoading || isOrderLocked" @click="submitOrder">
                     {{ 
                         isOrderLoading ? 'Saving...' : 
                         isSaved ? 'Saved!' :
                         isDirty ? 'Save Order' : 'Up to date'
                     }}
                 </button>
-
             </div>
         </div>
 
@@ -313,6 +341,11 @@ const isOrderLoading = ref(false);
 const isLoadingSummary = ref(false);
 const isStatusUpdating = ref(false);
 const showFriendList = ref(false);
+// Local status to support optimistic updates without mutating props directly/lagging
+const localStatus = ref(props.group.status);
+watch(() => props.group.status, (newVal) => {
+    localStatus.value = newVal;
+});
 
 const activeTab = ref(
     props.mode === 'summary' ? 'summary' : 
@@ -379,9 +412,15 @@ watch(() => props.group, (newGroup) => {
         }
 
         // 3. Group Summary Data
-        groupStats.value = newGroup.orderStats || [];
-        grandTotal.value = newGroup.totalGroupAmount || 0;
-        allOrders.value = newGroup.allOrders || [];
+        // Only update if data is present (Dashboard usually sends limited info)
+        if (newGroup.orderStats) groupStats.value = newGroup.orderStats;
+        if (newGroup.totalGroupAmount !== undefined) grandTotal.value = newGroup.totalGroupAmount;
+        
+        // CRITICAL: specific check to avoid overwriting detailed 'allOrders' (fetched separately) 
+        // with undefined/empty from dashboard list
+        if (newGroup.allOrders) {
+            allOrders.value = newGroup.allOrders;
+        }
     }
 }, { immediate: true });
 
@@ -599,7 +638,63 @@ const submitOrder = async (showNotification = true) => {
 // `invites`, `products`, `myOrder`, `totalGroupAmount`.
 // But `orders` are processed into `participants` and `totalGroupAmount`.
 // Missing: Breakdown of items bought by everyone.
-//
+
+const isGroupClosed = computed(() => {
+    return localStatus.value === 'CLOSED';
+});
+
+const isGroupExpired = computed(() => {
+    if (!props.group.endTime) return false;
+    return new Date() > new Date(props.group.endTime);
+});
+
+const isOrderLocked = computed(() => {
+    // Only lock if status is effectively CLOSED. Ignore expiration if manually set to OPEN.
+    return isGroupClosed.value;
+});
+
+const toggleGroupStatus = async () => {
+    if (isStatusUpdating.value) return;
+    
+    // Optimistic Update
+    const oldStatus = localStatus.value;
+    const newStatus = oldStatus === 'OPEN' ? 'CLOSED' : 'OPEN';
+    
+    // Quick confirm for Closing
+    // Confirm Change
+    const action = newStatus === 'CLOSED' ? 'CLOSE' : 'OPEN';
+    const message = newStatus === 'CLOSED' 
+        ? "Are you sure you want to CLOSE this group?"
+        : "Are you sure you want to OPEN this group?";
+
+    const confirmed = await toastStore.showConfirm(`${action} Group`, message);
+    if (!confirmed) return;
+
+    isStatusUpdating.value = true;
+    // Optimistic Update Locally
+    localStatus.value = newStatus;
+    
+    try {
+        const response = await axios.put(`http://localhost:3001/api/groups/${props.group.id}/status`, {
+             status: newStatus
+        }, {
+             headers: { Authorization: `Bearer ${authStore.token}` }
+        });
+
+        // Update local status via emit (best practice) or direct prop mutation (if reactive object passed)
+        // Since props are readonly, we really should emit 'updated'.
+        toastStore.addToast(`Group is now ${newStatus}`, 'success');
+        emit('updated');
+
+    } catch (error) {
+        console.error("Failed to update status", error);
+        toastStore.addToast("Failed to update status", 'error');
+        // Revert local status on error
+        localStatus.value = oldStatus; 
+    } finally {
+        isStatusUpdating.value = false;
+    }
+};
 // I should update `groupController.js` to return `stats` or `allOrders`.
 // Let's implement client-side assuming data exists, but I know it's missing.
 // I MUST fetch updated data or update the backend controller.
@@ -639,14 +734,27 @@ const addProduct = () => {
     form.products.push({ name: '', price: null });
 };
 
-const removeProduct = (index) => {
+const removeProduct = async (index) => {
     const product = form.products[index];
     if (isProductInUse(product.name)) {
-        alert(`Cannot delete "${product.name}" because it is currently included in an order.`);
+        toastStore.addToast(`Cannot delete "${product.name}" because it is currently included in an order.`, 'error');
         return;
     }
-    if (form.products.length > 1) {
+    if (form.products.length <= 1) {
+        toastStore.addToast("Cannot delete the last item.", 'warning');
+        return;
+    }
+
+    const confirmed = await toastStore.showConfirm(
+        "Delete Item", 
+        `Are you sure you want to delete "${product.name || 'this item'}"?`
+    );
+
+    if (confirmed) {
         form.products.splice(index, 1);
+        // Persist change immediately
+        await handleSubmit(); 
+        toastStore.addToast("Item deleted successfully", "success");
     }
 };
 
@@ -899,8 +1007,8 @@ onMounted(() => {
 label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .input-field { width: 100%; padding: 10px; border: 2px solid #999; border-radius: 8px; font-size: 1rem; color: #000; background: #fff; }
 .input-field:disabled { background: #f0f0f0; border-color: #999; }
-.time-inputs { display: flex; gap: 15px; align-items: center; }
-.time-inputs .input-field { flex: 1; min-width: 0; font-size: 0.9rem; padding: 8px; }
+.time-inputs { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; } /* Added wrap */
+.time-inputs .input-field { flex: 1; max-width: 225px; font-size: 0.9rem; padding: 8px; } /* Increased min-width */
 
 /* Members Section */
 .members-container {
@@ -951,8 +1059,6 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .remove-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
 .add-btn { width: 100%; padding: 12px; background: #eee; border: 2px solid #999; border-radius: 8px; cursor: pointer; font-weight: bold; color: #000; }
 .add-btn:hover { background: #ddd; }
-.add-btn { width: 100%; padding: 12px; background: #eee; border: 2px solid #999; border-radius: 8px; cursor: pointer; font-weight: bold; color: #000; }
-.add-btn:hover { background: #ddd; }
 .form-actions { 
     margin-top: 25px; 
     display: flex; 
@@ -970,7 +1076,7 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .qty-input { width: 80px; }
 .add-order-btn { background: #333; color: white; border: none; border-radius: 8px; padding: 0 20px; cursor: pointer; font-weight: bold; }
 .add-order-btn:disabled { background: #999; cursor: not-allowed; }
-/* My Order Styles */
+
 .my-order-list .order-table { margin-top: 10px; }
 .order-table .table-header, .order-table .table-row { 
     grid-template-columns: 1fr 1fr 1fr 0.5fr !important; /* Equal width for first 3, smaller action */
@@ -989,7 +1095,6 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
     font-size: 0.85rem;
     color: #888;
     font-style: italic;
-    /* Removed text-align right and margin top since it's now flex item */
 }
 
 .auto-save-indicator {
@@ -1065,6 +1170,68 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 }
 
 /* Animations */
+
+.time-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Push status to right or keep left? "Put after time:" implies left. */
+    /* Let's try just flex-start with gap */
+    justify-content: flex-start;
+    gap: 15px;
+    margin-bottom: 8px;
+}
+.time-label-row label {
+    margin-bottom: 0;
+}
+
+.status-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 0; /* Reset margin */
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.status-badge-large {
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    white-space: nowrap; /* Prevent wrapping */
+}
+.status-badge-large.open { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.status-badge-large.closed { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+
+.toggle-status-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.status-toggle-pill-dashboard {
+    padding: 2px 10px; /* More padding */
+    border: none;
+    border-radius: 20px; /* Pill shape */
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    min-width: 80px; /* Increased Fixed width */
+    text-align: center;
+    white-space: nowrap;
+    flex-shrink: 0; /* Prevent compression */
+}
+/* .status-toggle-pill-dashboard:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+} */
+.status-toggle-pill-dashboard.open {
+    background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+}
+/* Removed individual hover to use shared hover effect */
+.status-toggle-pill-dashboard.closed {
+    background-color: #6c757d; color: white; border: 1px solid #5a6268; /* Darker Grey for better visibility/active look */
+}
+/* .status-toggle-pill-dashboard.closed:hover {
+    background-color: #5a6268;
+} */
 
 </style>
 ```

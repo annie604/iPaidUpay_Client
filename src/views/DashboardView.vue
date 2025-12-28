@@ -41,9 +41,31 @@
           </div>
 
           <div class="card-body" @click="openModal(group, 'detail')">
-            <div class="info-row">
+            <div class="info-row time-row">
               <span class="label">Time:</span>
-              <span class="value">{{ group.timeRange }}</span>
+              <div class="time-content">
+                  <span class="value">{{ group.timeRange }}</span>
+                  
+                  <!-- Dashboard Status Toggle -->
+                   <button 
+                      v-if="group.isCreator" 
+                      type="button" 
+                      class="status-toggle-pill-dashboard"
+                      :class="{ 'open': group.status === 'OPEN', 'closed': group.status === 'CLOSED' }"
+                      @click.stop="toggleGroupStatus(group)"
+                      title="Click to toggle status"
+                  >
+                      {{ group.status === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                  </button>
+                  <span 
+                      v-else
+                      class="status-toggle-pill-dashboard" 
+                      :class="{ 'open': group.status === 'OPEN', 'closed': group.status === 'CLOSED' }"
+                      style="cursor: default;"
+                  >
+                      {{ group.status === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                  </span>
+              </div>
             </div>
             <div class="info-row">
               <span class="label">Creator:</span>
@@ -150,10 +172,13 @@ const openModal = (group, mode) => {
 };
 
 const handleGroupUpdated = async () => {
+    // Store ID before fetch
+    const currentId = selectedGroup.value?.id;
     await fetchGroups();
+    
     // Update selectedGroup with the fresh data from the new groups list
-    if (selectedGroup.value) {
-        const updatedGroup = groups.value.find(g => g.id === selectedGroup.value.id);
+    if (currentId) {
+        const updatedGroup = groups.value.find(g => g.id === currentId);
         if (updatedGroup) {
             selectedGroup.value = updatedGroup;
         }
@@ -182,6 +207,45 @@ const deleteGroup = async (groupId) => {
     activeMenuId.value = null;
 };
 
+const toggleGroupStatus = async (group) => {
+    if (!group) return;
+    
+    const newStatus = group.status === 'OPEN' ? 'CLOSED' : 'OPEN';
+    
+    // Quick confirm for Closing (optional, but good for consistency)
+    // Confirm Change
+    const action = newStatus === 'CLOSED' ? 'CLOSE' : 'OPEN';
+    const message = newStatus === 'CLOSED' 
+        ? `Are you sure you want to CLOSE "${group.title}"?`
+        : `Are you sure you want to OPEN "${group.title}"?`;
+
+    const confirmed = await toastStore.showConfirm(`${action} Group`, message);
+    if (!confirmed) return;
+
+    try {
+        const token = authStore.token;
+        // Optimistic Update
+        const oldStatus = group.status;
+        group.status = newStatus;
+
+        await axios.put(`http://localhost:3001/api/groups/${group.id}/status`, {
+             status: newStatus
+        }, {
+             headers: { Authorization: `Bearer ${token}` }
+        });
+
+        toastStore.addToast(`Group is now ${newStatus}`, 'success');
+        
+        // No need to fetchGroups if we trust the update, but to be safe/sync:
+        // fetchGroups(); 
+    } catch (error) {
+        console.error("Failed to update status", error);
+        // Revert on error
+        group.status = group.status === 'OPEN' ? 'CLOSED' : 'OPEN'; 
+        toastStore.addToast("Failed to update status", 'error');
+    }
+};
+
 // Logout logic moved to Navbar
 
 const fetchGroups = async () => {
@@ -202,6 +266,7 @@ const fetchGroups = async () => {
         groups.value = response.data.map(g => ({
             id: g.id,
             title: g.title,
+            status: g.status, // Ensure status is mapped
             startTime: g.startTime, // Keep original ISO for editing
             endTime: g.endTime,     // Keep original ISO for editing
             timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
@@ -513,4 +578,51 @@ onUnmounted(() => {
       font-size: 1rem;
   }
 }
+/* Dashboard Status Styles */
+.time-row {
+    align-items: flex-start; /* For multi-line time */
+}
+.time-content {
+    display: flex;
+    flex-direction: column; /* Stack time and button on mobile if needed, or row? User said "behind time". */
+    /* Let's Try Row layout with wrap */
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap; 
+    gap: 10px;
+}
+
+.status-toggle-pill-dashboard {
+    padding: 2px 10px;
+    border: none;
+    border-radius: 15px; /* Pill shape */
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    white-space: nowrap;
+}
+.status-toggle-pill-dashboard.open {
+    background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+}
+.status-toggle-pill-dashboard.open:hover {
+    background-color: #c3e6cb;
+}
+.status-toggle-pill-dashboard.closed {
+    background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db;
+}
+.status-toggle-pill-dashboard.closed:hover {
+    background-color: #d6d8db;
+}
+
+.status-badge-dashboard {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+.status-badge-dashboard.open { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.status-badge-dashboard.closed { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+
 </style>
