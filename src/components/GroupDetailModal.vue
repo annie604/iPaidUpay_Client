@@ -38,6 +38,13 @@
           >
              Group Summary
           </button>
+
+          <button 
+            :class="['tab-btn', { active: activeTab === 'payments' }]" 
+            @click="activeTab = 'payments'"
+          >
+             Payments
+          </button>
        </div>
       
       <div class="modal-body">
@@ -242,6 +249,42 @@
              </div>
         </div>
 
+        <!-- Tab 4: Payments (New) -->
+        <div v-show="activeTab === 'payments'" class="tab-content">
+             <div class="summary-table-container">
+                <div class="order-table summary-table" style="grid-template-columns: 1fr 1fr 1fr !important;">
+                    <div class="table-header" style="grid-template-columns: 1fr 1fr 1fr !important;">
+                        <span>Member</span>
+                        <span>Balance</span>
+                        <span>Status</span>
+                    </div>
+                    <div v-if="allOrders.length === 0" class="empty-msg">
+                        No orders found.
+                    </div>
+                    <div v-else v-for="(order, idx) in allOrders" :key="idx" class="table-row" style="grid-template-columns: 1fr 1fr 1fr !important;">
+                        <span>
+                            {{ order.user ? order.user.name : (order.userId === userStore.user?.id ? 'Me' : `User ${order.userId}`) }}
+                            <span v-if="order.userId === group.creatorId" class="creator-tag">(Host)</span>
+                        </span>
+                        <span>${{ order.total || 0 }}</span>
+                        <span>
+                             <button 
+                                class="status-btn" 
+                                :class="{ 'paid': order.paymentStatus === 'PAID', 'unpaid': order.paymentStatus === 'UNPAID' }"
+                                @click="togglePaymentStatus(order)"
+                                :disabled="!isCreator || isStatusUpdating"
+                             >
+                                {{ order.paymentStatus || 'UNPAID' }}
+                             </button>
+                        </span>
+                    </div>
+                </div>
+                 <div class="grand-total">
+                    Total Collected: <span class="price">${{ totalCollected }}</span> / ${{ grandTotal }}
+                </div>
+             </div>
+        </div>
+
       </div>
     </div>
     <!-- Loading overlay if fetching full details -->
@@ -265,6 +308,7 @@ const userStore = useUserStore();
 const isLoading = ref(false);
 const isOrderLoading = ref(false);
 const isLoadingSummary = ref(false);
+const isStatusUpdating = ref(false);
 const showFriendList = ref(false);
 
 const activeTab = ref(
@@ -295,6 +339,11 @@ const lastUpdatedTime = ref(null);
 const groupStats = ref([]);
 const grandTotal = ref(0);
 const allOrders = ref([]);
+const totalCollected = computed(() => {
+    return allOrders.value
+        .filter(o => o.paymentStatus === 'PAID')
+        .reduce((sum, o) => sum + (o.total || 0), 0);
+});
 
 
 // Initialize data from props
@@ -743,15 +792,40 @@ const refreshGroupSummary = async (updateLocalOrder = true) => {
     }
 };
 
+const togglePaymentStatus = async (order) => {
+    if (!order || !isCreator.value) return;
+    
+    const newStatus = order.paymentStatus === 'PAID' ? 'UNPAID' : 'PAID';
+    isStatusUpdating.value = true;
+
+    try {
+        const token = authStore.token;
+        await axios.put(`http://localhost:3001/api/orders/${order.id}/payment-status`, {
+            status: newStatus
+        }, {
+             headers: { Authorization: `Bearer ${token}` }
+        });
+
+        // Update local state immediately
+        order.paymentStatus = newStatus;
+
+    } catch (error) {
+        console.error("Failed to update payment status", error);
+        alert("Failed to update status.");
+    } finally {
+        isStatusUpdating.value = false;
+    }
+};
+
 onMounted(() => {
     // We need full order details (allOrders) to perform validation like "isProductInUse".
     // The prop 'group' from dashboard only has limited info.
     refreshGroupSummary(false);
 });
 
-// Auto-refresh summary when switching to summary tab
+// Auto-refresh summary when switching to summary tab or payments tab
 watch(activeTab, (newTab) => {
-    if (newTab === 'summary' || newTab === 'order') {
+    if (newTab === 'summary' || newTab === 'order' || newTab === 'payments') {
         refreshGroupSummary();
     }
 });
@@ -946,6 +1020,36 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
      gap: 10px;
 }
 .grand-total { font-size: 1.4rem; font-weight: bold; margin-top: 20px; text-align: right; border-top: 2px solid #999; padding-top: 15px; }
+
+.status-btn {
+    padding: 5px 15px;
+    border-radius: 15px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    min-width: 80px;
+}
+.status-btn.paid {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+.status-btn.unpaid {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+.status-btn:disabled {
+    cursor: default;
+    opacity: 0.8;
+}
+.creator-tag {
+    font-size: 0.8rem;
+    color: #ee4d2d;
+    margin-left: 5px;
+}
 
 /* Animations */
 
