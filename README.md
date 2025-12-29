@@ -19,6 +19,17 @@ IpaidUpay Client is the frontend application for the group buying platform. It p
 - **HTTP Client**: Axios
 - **Server**: Nginx (Production Docker)
 
+## Project Structure
+
+```
+src/
+├── components/   # Reusable UI components
+├── views/        # Main page components
+├── stores/       # Pinia state management modules
+├── router/       # Vue Router configuration
+└── App.vue       # Root component
+```
+
 ## Environment Setup
 
 The client is configured to use a relative API path (`/api`) which is proxied to the backend. No `.env` file is strictly required for basic operation if running via Docker or if the proxy is configured in Vite.
