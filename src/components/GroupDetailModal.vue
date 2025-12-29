@@ -8,7 +8,6 @@
 
       <!-- Tab Navigation -->
        <div class="modal-tabs" v-if="mode === 'detail' || mode === 'summary' || mode === 'order'">
-          <!-- Menu Settings: Visible if Creator, or Editing. Non-creators see 'Menu List' -->
           <button 
             :class="['tab-btn', { active: activeTab === 'settings' }]" 
             @click="activeTab = 'settings'"
@@ -49,505 +48,93 @@
       
       <div class="modal-body">
         
-        <!-- Tab 1: Menu Settings (Inputs for Group Info & Menu) -->
-        <div v-show="activeTab === 'settings'" class="tab-content">
-             <form @submit.prevent="handleSubmit">
-                <div class="form-group">
-                    <label>Group Name:</label>
-                    <input 
-                    v-model="form.title" 
-                    type="text" 
-                    required
-                    class="input-field"
-                    :disabled="!canEditSettings"
-                    />
-                </div>
-
-                <div class="form-group">
-                    <div class="time-label-row">
-                        <label>Time:</label>
-                        <!-- Status Toggle (Open/Closed) -->
-                        <div class="status-control" v-if="mode !== 'create'">
-                            <!-- Interactive Toggle for Creator -->
-                             <button 
-                                v-if="isCreator" 
-                                type="button" 
-                                class="status-toggle-pill-dashboard"
-                                :class="{ 'open': localStatus === 'OPEN', 'closed': localStatus === 'CLOSED' }"
-                                @click="toggleGroupStatus"
-                                :disabled="isStatusUpdating"
-                                title="Click to toggle status"
-                            >
-                                {{ localStatus === 'OPEN' ? 'OPEN' : 'CLOSED' }}
-                            </button>
-
-                            <!-- Read-only Badge for Members -->
-                            <span 
-                                v-else
-                                class="status-toggle-pill-dashboard" 
-                                :class="{ 'open': localStatus === 'OPEN', 'closed': localStatus === 'CLOSED' }"
-                                style="cursor: default;"
-                            >
-                                {{ localStatus === 'OPEN' ? 'OPEN' : 'CLOSED' }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="time-inputs">
-                        <input 
-                            v-model="form.startTime" 
-                            type="datetime-local" 
-                            required 
-                            class="input-field date-input"
-                            :disabled="!canEditSettings"
-                            @click="showPicker"
-                        />
-                        <span>to</span>
-                        <input 
-                            v-model="form.endTime" 
-                            type="datetime-local" 
-                            required 
-                            class="input-field date-input"
-                            :disabled="!canEditSettings"
-                            @click="showPicker"
-                        />
-                    </div>
-                </div>
-                
-                <!-- Members Management Section -->
-                <div class="form-group members-section" ref="membersSection">
-                    <label>Members:</label>
-                    <div class="members-container">
-                        <div v-for="userId in form.invitedUserIds" :key="userId" class="member-chip">
-                            <span class="member-name" :class="{ 'creator-name': group.creatorId && userId === group.creatorId }">
-                                {{ getFriendName(userId) }}
-                            </span>
-                             <!-- Allow removal only if editing is allowed and target is not the Creator -->
-                            <button v-if="canEditSettings && !(group.creatorId && userId === group.creatorId)" type="button" class="remove-member-btn" @click="toggleFriend(userId)">×</button>
-                        </div>
-
-                        <button v-if="canEditSettings" type="button" class="invite-btn" @click="showFriendList = !showFriendList">
-                            Invite +
-                        </button>
-                    </div>
-
-                    <!-- Dropdown Backdrop -->
-                    <div v-if="showFriendList" class="dropdown-backdrop" @click="showFriendList = false"></div>
-
-                    <div v-if="showFriendList" class="friend-selection-list">
-                        <div v-if="userStore.friends.length === 0" class="no-friends-msg">
-                            No friends to invite.
-                        </div>
-                        <div 
-                            v-for="friend in userStore.friends" 
-                            :key="friend.id" 
-                            class="friend-option" 
-                            :class="{ 'selected': form.invitedUserIds.includes(friend.id) }"
-                            @click="toggleFriend(friend.id)"
-                        >
-                            <span class="friend-avatar-small">{{ friend.name.charAt(0).toUpperCase() }}</span>
-                            <span>{{ friend.name }} (@{{ friend.username }})</span>
-                            <span v-if="form.invitedUserIds.includes(friend.id)" class="check-mark">✓</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Menu Items Section -->
-                <div class="menu-section">
-                    <label>Menu (Items & Prices)</label>
-                    <div class="menu-table">
-                        <div class="table-header">
-                            <span>Item Name</span>
-                            <span>Price</span>
-                            <span v-if="isEditing">Action</span>
-                        </div>
-                        <div v-for="(item, index) in form.products" :key="index" class="table-row">
-                            <input v-model="item.name" type="text" placeholder="Item" required class="input-field small" :disabled="!canEditSettings" />
-                            <input v-model.number="item.price" type="number" placeholder="$" required class="input-field small" :disabled="!canEditSettings" />
-                            <button 
-                                v-if="canEditSettings" 
-                                type="button" 
-                                @click="removeProduct(index)" 
-                                class="remove-btn"
-                                :disabled="isProductInUse(item.name)"
-                                :title="isProductInUse(item.name) ? 'Cannot delete: Item is currently ordered by a member' : 'Remove Item'"
-                            >
-                                &times;
-                            </button>
-                        </div>
-                    </div>
-                    <button v-if="canEditSettings" type="button" @click="addProduct" class="add-btn">+ Add Item</button>
-                </div>
-
-                <div class="form-actions" v-if="canEditSettings">
-                    <button type="submit" class="submit-btn" :disabled="isLoading">
-                        {{ 
-                            isLoading ? 'Saving...' : 
-                            isSettingsSaved ? 'Saved!' :
-                            isSettingsDirty ? 'Save Changes' : 'Up to date'
-                        }}
-                    </button>
-                </div>
-            </form>
+        <!-- Tab 1: Settings / Menu -->
+        <div v-show="activeTab === 'settings'">
+            <GroupSettingsTab 
+                :group="fullGroupData" 
+                :mode="mode" 
+                :allOrders="allOrders"
+                @updated="handleChildUpdate"
+            />
         </div>
 
-        <!-- Tab 2: My Order (Individual Member Order) -->
-        <div v-show="activeTab === 'order'" class="tab-content">
-            <div class="order-selection-area">
-                <label>Add Item:</label>
-                <div class="selection-row">
-                    <select v-model="selectedProductIndex" class="input-field" :disabled="isOrderLocked">
-                        <option :value="-1" disabled>Select Item...</option>
-                        <option v-for="(prod, idx) in form.products" :key="idx" :value="idx">
-                            {{ prod.name }} (${{ prod.price }})
-                        </option>
-                    </select>
-                    <input v-model.number="orderQuantity" type="number" min="1" class="input-field qty-input" placeholder="Qty" :disabled="isOrderLocked" />
-                    <button type="button" class="add-order-btn" @click="addToMyOrder" :disabled="selectedProductIndex === -1 || isOrderLocked">Add</button>
-                </div>
-            </div>
-
-            <div class="my-order-list">
-                <div class="order-table">
-                     <div class="table-header">
-                        <span>Item</span>
-                        <span>Qty</span>
-                        <span>Subtotal</span>
-                        <span>Action</span>
-                    </div>
-                    <div v-if="myOrderItems.length === 0" class="empty-msg">No items selected yet.</div>
-                    <div v-for="(item, idx) in myOrderItems" :key="idx" class="table-row">
-                        <span>{{ item.name }}</span>
-                        <!-- Quantity Control (- 1 +) -->
-                        <div class="qty-control">
-                            <button type="button" class="qty-btn" @click="decreaseQty(idx)" :disabled="isOrderLocked">-</button>
-                            <input 
-                                v-model.number="item.quantity" 
-                                type="text" 
-                                class="qty-input-small" 
-                                @change="handleQtyChange(idx)"
-                                :disabled="isOrderLocked"
-                            />
-                            <button type="button" class="qty-btn" @click="increaseQty(idx)" :disabled="isOrderLocked">+</button>
-                        </div>
-                        <span>${{ item.price * item.quantity }}</span>
-                        <button type="button" class="remove-btn" @click="removeFromMyOrder(idx)" :disabled="isOrderLocked">&times;</button>
-                    </div>
-                </div>
-                <div class="order-total">
-                    Total: <span class="price">${{ myOrderTotal }}</span>
-                </div>
-            </div>
-
-            <div class="form-actions">
-                <div class="last-updated" v-if="formattedLastUpdated">
-                    Last updated: <br>
-                    {{ formattedLastUpdated }}
-                </div>
-                <button type="button" class="submit-btn" :disabled="isOrderLoading || isOrderLocked" @click="submitOrder">
-                    {{ 
-                        isOrderLoading ? 'Saving...' : 
-                        isSaved ? 'Saved!' :
-                        isDirty ? 'Save Order' : 'Up to date'
-                    }}
-                </button>
-            </div>
+        <!-- Tab 2: My Order -->
+        <div v-show="activeTab === 'order'">
+            <GroupOrderTab 
+                :groupId="group.id" 
+                :products="fullGroupData.products" 
+                :initialOrder="fullGroupData.myOrder"
+                :isLocked="fullGroupData.status === 'CLOSED'"
+                @updated="handleChildUpdate"
+            />
         </div>
 
-        <!-- Tab 3: Group Summary (Aggregation) -->
-        <div v-show="activeTab === 'summary'" class="tab-content">
-             <div class="summary-table-container">
-                <div class="order-table summary-table">
-                    <div class="table-header">
-                        <span>Item</span>
-                        <span>Total Qty</span>
-                        <span>Total Amount</span>
-                        <span>Ordered By</span>
-                    </div>
-                    <div v-for="(stat, idx) in detailedGroupStats" :key="idx" class="table-row summary-row">
-                        <span>{{ stat.name }}</span>
-                        <span>{{ stat.quantity }}</span>
-                        <span>${{ stat.totalPrice }}</span>
-                        <span class="ordered-by">
-                            {{ stat.users.map(u => `${u.name} x${u.qty}`).join(', ') }}
-                        </span>
-                    </div>
-                </div>
-                 <div class="grand-total">
-                    Grand Total: <span class="price">${{ grandTotal }}</span>
-                </div>
-             </div>
+        <!-- Tab 3: Group Summary -->
+        <div v-show="activeTab === 'summary'">
+            <GroupSummaryTab 
+                :detailedGroupStats="detailedGroupStats" 
+                :grandTotal="grandTotal" 
+            />
         </div>
 
-        <!-- Tab 4: Payments (Tracking Paid/Unpaid Status) -->
-        <div v-show="activeTab === 'payments'" class="tab-content">
-             <div class="summary-table-container">
-                <div class="order-table summary-table" style="grid-template-columns: 1fr 1fr 1fr !important;">
-                    <div class="table-header" style="grid-template-columns: 1fr 1fr 1fr !important;">
-                        <span>Member</span>
-                        <span>Balance</span>
-                        <span>Status</span>
-                    </div>
-                    <div v-if="allOrders.length === 0" class="empty-msg">
-                        No orders found.
-                    </div>
-                    <div v-else v-for="(order, idx) in allOrders" :key="idx" class="table-row" style="grid-template-columns: 1fr 1fr 1fr !important;">
-                        <span>
-                            {{ order.user ? order.user.name : (order.userId === userStore.user?.id ? 'Me' : `User ${order.userId}`) }}
-                            <span v-if="order.userId === group.creatorId" class="creator-tag">(Host)</span>
-                        </span>
-                        <span>${{ order.total || 0 }}</span>
-                        <span>
-                             <button 
-                                class="status-btn" 
-                                :class="{ 'paid': order.paymentStatus === 'PAID', 'unpaid': order.paymentStatus === 'UNPAID' }"
-                                @click="togglePaymentStatus(order)"
-                                :disabled="!isCreator || isStatusUpdating"
-                             >
-                                {{ order.paymentStatus || 'UNPAID' }}
-                             </button>
-                        </span>
-                    </div>
-                </div>
-                 <div class="grand-total">
-                    Total Collected: <span class="price">${{ totalCollected }}</span> / ${{ grandTotal }}
-                </div>
-             </div>
+        <!-- Tab 4: Payments -->
+        <div v-show="activeTab === 'payments'">
+            <GroupPaymentsTab 
+                :orders="allOrders" 
+                :isCreator="isCreator" 
+                :creatorId="fullGroupData.creatorId || 0"
+                :grandTotal="grandTotal"
+                :totalCollected="totalCollected"
+                @updated="handleChildUpdate"
+            />
         </div>
 
       </div>
     </div>
     
-    <!-- Loading overlay for background data fetch -->
     <div v-if="isLoadingSummary" class="loading-overlay">Loading details...</div>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import { useUserStore } from '../stores/userStore';
-import { useToastStore } from '../stores/toastStore';
 import axios from 'axios';
+
+// Subcomponents
+import GroupSettingsTab from './groups/GroupSettingsTab.vue';
+import GroupOrderTab from './groups/GroupOrderTab.vue';
+import GroupSummaryTab from './groups/GroupSummaryTab.vue';
+import GroupPaymentsTab from './groups/GroupPaymentsTab.vue';
 
 const props = defineProps({
     group: { type: Object, required: true },
-    mode: { type: String, default: 'detail' } // Modes: 'detail', 'edit', 'invite'
+    mode: { type: String, default: 'detail' }
 });
+
 const emit = defineEmits(['close', 'updated']);
 const authStore = useAuthStore();
-const userStore = useUserStore();
-const toastStore = useToastStore();
 
-// --- Loading States ---
-const isLoading = ref(false);          // For saving settings
-const isOrderLoading = ref(false);     // For saving my order
-const isLoadingSummary = ref(false);   // For fetching initial detailed data
-const isStatusUpdating = ref(false);   // For toggling group status (Open/Close)
-
-const showFriendList = ref(false);
-
-// Local status allows optimistic updates without waiting for parent prop propagation
-const localStatus = ref(props.group.status);
-watch(() => props.group.status, (newVal) => {
-    localStatus.value = newVal;
-});
-
-// Determine default active tab
 const activeTab = ref(
     props.mode === 'summary' ? 'summary' : 
     props.mode === 'order' ? 'order' : 
     'settings'
 );
 
-// --- Settings Form Data ---
-const form = reactive({
-    title: '',
-    startTime: '',
-    endTime: '',
-    products: [],
-    invitedUserIds: []
-});
-const originalForm = ref(null); // Snapshot for dirty checking
-const isSettingsSaved = ref(false);
-
-// --- My Order Data ---
-const selectedProductIndex = ref(-1);
-const orderQuantity = ref(1);
-const myOrderItems = ref([]);
-const originalOrderItems = ref([]); // Snapshot for dirty checking
-// const lastUpdatedTime = ref(null); // Removed to avoid unused variable warning or re-added if necessary. It is used in template.
-const lastUpdatedTime = ref(null);
-
-// --- Group Summary Data ---
-const groupStats = ref([]);
-const grandTotal = ref(0);
+const isLoadingSummary = ref(false);
+const fullGroupData = ref({ ...props.group }); // Start with props, update with full fetch
 const allOrders = ref([]);
-const totalCollected = computed(() => {
-    return allOrders.value
-        .filter(o => o.paymentStatus === 'PAID')
-        .reduce((sum, o) => sum + (o.total || 0), 0);
-});
 
+// Derived Stats
+const grandTotal = computed(() => fullGroupData.value.totalGroupAmount || 0);
 
-// Initialize form and local state from props when group changes
-watch(() => props.group, (newGroup) => {
-    if (newGroup) {
-        // 1. Populate Settings Form
-        form.title = newGroup.title;
-        form.startTime = newGroup.startTime ? newGroup.startTime.slice(0, 16) : '';
-        form.endTime = newGroup.endTime ? newGroup.endTime.slice(0, 16) : '';
-        form.products = newGroup.products ? JSON.parse(JSON.stringify(newGroup.products)) : []; 
-        form.invitedUserIds = newGroup.invitedUserIds ? [...newGroup.invitedUserIds] : [];
-        
-        // Save initial state for "Save Changes" button state
-        originalForm.value = JSON.parse(JSON.stringify(form));
-
-        // 2. Populate My Order Data
-        if (newGroup.myOrder && newGroup.myOrder.items) {
-             const items = newGroup.myOrder.items.map(i => ({
-                 name: i.name,
-                 price: i.price,
-                 quantity: i.quantity
-             }));
-             myOrderItems.value = JSON.parse(JSON.stringify(items));
-             originalOrderItems.value = JSON.parse(JSON.stringify(items));
-             lastUpdatedTime.value = newGroup.myOrder.updatedAt;
-        } else {
-             myOrderItems.value = [];
-             originalOrderItems.value = [];
-             lastUpdatedTime.value = null;
-        }
-
-        // 3. Populate Summary Basics (detailed stats fetched separately)
-        if (newGroup.orderStats) groupStats.value = newGroup.orderStats;
-        if (newGroup.totalGroupAmount !== undefined) grandTotal.value = newGroup.totalGroupAmount;
-        
-        // Use supplied allOrders if available (e.g., from a 'summary' endpoint call)
-        if (newGroup.allOrders) {
-            allOrders.value = newGroup.allOrders;
-        }
-    }
-}, { immediate: true });
-
-
-// --- Permissions & Modes ---
-const isEditing = computed(() => props.mode === 'edit');
-const isInviteMode = computed(() => props.mode === 'invite');
-const isCreator = computed(() => props.group.isCreator);
-const canEditSettings = computed(() => isCreator.value || isEditing.value || isInviteMode.value);
-
-const isSettingsDirty = computed(() => {
-    if (!originalForm.value) return false;
-    return JSON.stringify(form) !== JSON.stringify(originalForm.value);
-});
-
-const modalTitle = computed(() => {
-    if (props.mode === 'edit') return 'Edit Group';
-    if (props.mode === 'invite') return 'Invite Members';
-    return props.group.title || 'Group Details';
-});
-
-
-// --- My Order Logic ---
-const addToMyOrder = () => {
-    if (selectedProductIndex.value === -1) return;
-    const product = form.products[selectedProductIndex.value];
-    
-    // Merge with existing item if adding same product
-    const existing = myOrderItems.value.find(i => i.name === product.name && i.price === product.price);
-    if (existing) {
-        existing.quantity += orderQuantity.value;
-    } else {
-        myOrderItems.value.push({
-            name: product.name,
-            price: product.price,
-            quantity: orderQuantity.value
-        });
-    }
-    // Reset selection
-    selectedProductIndex.value = -1;
-    orderQuantity.value = 1;
-};
-
-const removeFromMyOrder = async (index) => {
-    const item = myOrderItems.value[index];
-    const confirmed = await toastStore.showConfirm(
-        "Remove Item", 
-        `Are you sure you want to remove "${item.name}"?`
-    );
-
-    if (confirmed) {
-        myOrderItems.value.splice(index, 1);
-    }
-};
-
-const increaseQty = (index) => {
-    myOrderItems.value[index].quantity++;
-};
-
-const decreaseQty = async (index) => {
-    if (myOrderItems.value[index].quantity > 1) {
-        myOrderItems.value[index].quantity--;
-    } else {
-        // Prompt for removal if decreasing to 0
-        const confirmed = await toastStore.showConfirm(
-            "Remove Item", 
-            "Quantity is 0. Do you want to remove this item?"
-        );
-        if (confirmed) {
-            myOrderItems.value.splice(index, 1);
-        }
-    }
-};
-
-const handleQtyChange = async (index) => {
-    const qty = myOrderItems.value[index].quantity;
-    if (qty <= 0) {
-        const confirmed = await toastStore.showConfirm(
-            "Remove Item", 
-            "Quantity is 0. Do you want to remove this item?"
-        );
-        if (confirmed) {
-             myOrderItems.value.splice(index, 1);
-        } else {
-            myOrderItems.value[index].quantity = 1; // Revert
-        }
-    }
-};
-
-const isDirty = computed(() => {
-    // Basic length check
-    if (myOrderItems.value.length !== originalOrderItems.value.length) return true;
-    
-    // Sort to ensure order independence in comparison
-    const sortFn = (a, b) => a.name.localeCompare(b.name);
-    const sortedCurrent = [...myOrderItems.value].sort(sortFn);
-    const sortedOriginal = [...originalOrderItems.value].sort(sortFn);
-    
-    return JSON.stringify(sortedCurrent) !== JSON.stringify(sortedOriginal);
-});
-
-const formattedLastUpdated = computed(() => {
-    if (!lastUpdatedTime.value) return '';
-    const date = new Date(lastUpdatedTime.value);
-    return date.toLocaleString();
-});
-
-const myOrderTotal = computed(() => {
-    return myOrderItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-});
-
-
-// --- Aggregated Stats Logic ---
 const detailedGroupStats = computed(() => {
+    if (!allOrders.value) return [];
+    
     const statsMap = {};
-
-    // Fallback if allOrders is empty
-    if (!allOrders.value) return groupStats.value;
-
     allOrders.value.forEach(order => {
         if (!order.items) return;
-        const userName = order.user ? order.user.name : (order.userId === userStore.user?.id ? 'Me' : `User ${order.userId}`);
+        const userName = order.user ? order.user.name : `User ${order.userId}`;
         
         order.items.forEach(item => {
             if (!statsMap[item.name]) {
@@ -555,573 +142,140 @@ const detailedGroupStats = computed(() => {
                     name: item.name,
                     quantity: 0,
                     totalPrice: 0,
-                    users: [] // Breakdown of who ordered this item
+                    users: []
                 };
             }
             statsMap[item.name].quantity += item.quantity;
             statsMap[item.name].totalPrice += item.price * item.quantity;
             
-            // Track individual user quantities per item
-            const existingUser = statsMap[item.name].users.find(u => u.name === userName);
-            if (existingUser) {
-                existingUser.qty += item.quantity;
-            } else {
-                statsMap[item.name].users.push({ name: userName, qty: item.quantity });
-            }
+            const existing = statsMap[item.name].users.find(u => u.name === userName);
+            if (existing) existing.qty += item.quantity;
+            else statsMap[item.name].users.push({ name: userName, qty: item.quantity });
         });
     });
-
     return Object.values(statsMap).sort((a, b) => a.name.localeCompare(b.name));
 });
 
-const isSaved = ref(false);
-
-const submitOrder = async () => {
-    if (!isDirty.value) return; 
-    isOrderLoading.value = true;
-    isSaved.value = false;
-    try {
-        const token = authStore.token;
-        const response = await axios.post('/api/orders', {
-            groupId: props.group.id,
-            items: myOrderItems.value
-        }, {
-             headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // Update local state with server response (metadata like updatedAt)
-        if (response.data.order) {
-            const serverOrder = response.data.order;
-            lastUpdatedTime.value = serverOrder.updatedAt;
-            
-            const newItems = serverOrder.items.map(i => ({
-                name: i.name,
-                price: i.price,
-                quantity: i.quantity
-            }));
-            
-            myOrderItems.value = JSON.parse(JSON.stringify(newItems));
-            originalOrderItems.value = JSON.parse(JSON.stringify(newItems));
-        }
-
-        // Refresh summary to reflect changes immediately
-        await refreshGroupSummary(false); 
-        
-        isSaved.value = true;
-        setTimeout(() => isSaved.value = false, 3000);
-
-        emit('updated'); 
-
-    } catch (error) {
-        console.error("Order submit failed", error);
-        toastStore.addToast("Failed to update order. Please try again.", "error");
-    } finally {
-        isOrderLoading.value = false;
-    }
-};
-
-
-// --- Group Status Management ---
-const isGroupClosed = computed(() => {
-    return localStatus.value === 'CLOSED';
+const totalCollected = computed(() => {
+    if (!allOrders.value) return 0;
+    return allOrders.value
+        .filter(o => o.paymentStatus === 'PAID')
+        .reduce((sum, o) => sum + (o.total || 0), 0);
 });
 
-const isOrderLocked = computed(() => {
-    // Prevent ordering if group is closed
-    return isGroupClosed.value;
+const isCreator = computed(() => fullGroupData.value.isCreator);
+const modalTitle = computed(() => {
+    if (props.mode === 'edit') return 'Edit Group';
+    if (props.mode === 'invite') return 'Invite Members';
+    return fullGroupData.value.title || 'Group Details';
 });
 
-const toggleGroupStatus = async () => {
-    if (isStatusUpdating.value) return;
-    
-    // Toggle Status
-    const oldStatus = localStatus.value;
-    const newStatus = oldStatus === 'OPEN' ? 'CLOSED' : 'OPEN';
-    
-    // Confirmation
-    const action = newStatus === 'CLOSED' ? 'CLOSE' : 'OPEN';
-    const message = newStatus === 'CLOSED' 
-        ? "Are you sure you want to CLOSE this group?"
-        : "Are you sure you want to OPEN this group?";
-
-    const confirmed = await toastStore.showConfirm(`${action} Group`, message);
-    if (!confirmed) return;
-
-    isStatusUpdating.value = true;
-    // Optimistic Update
-    localStatus.value = newStatus;
+// Fetch full details
+const refreshGroupSummary = async () => {
+    if (props.mode === 'create') return; 
     
     try {
-        await axios.put(`/api/groups/${props.group.id}/status`, {
-             status: newStatus
-        }, {
-             headers: { Authorization: `Bearer ${authStore.token}` }
-        });
-
-        toastStore.addToast(`Group is now ${newStatus}`, 'success');
-        emit('updated');
-
-    } catch (error) {
-        console.error("Failed to update status", error);
-        toastStore.addToast("Failed to update status", 'error');
-        // Revert on failure
-        localStatus.value = oldStatus; 
-    } finally {
-        isStatusUpdating.value = false;
-    }
-};
-
-
-// --- Helpers ---
-const showPicker = (event) => {
-    try {
-        if (event.target.showPicker) {
-            event.target.showPicker();
-        }
-    } catch (error) {}
-};
-
-const isProductInUse = (productName) => {
-    if (!productName || !allOrders.value || allOrders.value.length === 0) return false;
-    return allOrders.value.some(order => 
-        order.items && order.items.some(item => item.name === productName)
-    );
-};
-
-const addProduct = () => {
-    form.products.push({ name: '', price: null });
-};
-
-const removeProduct = async (index) => {
-    const product = form.products[index];
-    if (isProductInUse(product.name)) {
-        toastStore.addToast(`Cannot delete "${product.name}" because it is currently included in an order.`, 'error');
-        return;
-    }
-    if (form.products.length <= 1) {
-        toastStore.addToast("Cannot delete the last item.", 'warning');
-        return;
-    }
-
-    const confirmed = await toastStore.showConfirm(
-        "Delete Item", 
-        `Are you sure you want to delete "${product.name || 'this item'}"?`
-    );
-
-    if (confirmed) {
-        form.products.splice(index, 1);
-        await handleSubmit(); 
-        toastStore.addToast("Item deleted successfully", "success");
-    }
-};
-
-const toggleFriend = (friendId) => {
-    const index = form.invitedUserIds.indexOf(friendId);
-    if (index === -1) {
-        form.invitedUserIds.push(friendId);
-    } else {
-        form.invitedUserIds.splice(index, 1);
-    }
-};
-
-const getFriendName = (id) => {
-    if (id === userStore.user?.id) return `${userStore.user.name} (Me)`;
-    if (props.group.creatorId && id === props.group.creatorId) return `${props.group.creator} (Host)`;
-
-    const friend = userStore.friends.find(f => f.id === id);
-    if (friend) return friend.name;
-    
-    if (props.group.invites) {
-        const invite = props.group.invites.find(i => i.userId === id);
-        if (invite && invite.name) return invite.name;
-    }
-
-    if (allOrders.value) {
-        const order = allOrders.value.find(o => o.userId === id);
-        if (order && order.user) return order.user.name;
-    }
-    
-    return `User ${id}`; 
-};
-
-// --- Submission ---
-const handleSubmit = async () => {
-    if (!isSettingsDirty.value) return;
-    
-    isLoading.value = true;
-    isSettingsSaved.value = false;
-    try {
-        const token = authStore.token;
-        const response = await axios.put(`/api/groups/${props.group.id}`, {
-            title: form.title,
-            startTime: new Date(form.startTime).toISOString(),
-            endTime: new Date(form.endTime).toISOString(),
-            products: form.products.map(p => ({
-                id: p.id, 
-                name: p.name,
-                price: Number(p.price)
-            })),
-            invitedUserIds: form.invitedUserIds
-        }, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // Sync new product data (handling new IDs generated by DB)
-        if (response.data.products) {
-            form.products = JSON.parse(JSON.stringify(response.data.products));
-        }
-
-        emit('updated');
-        
-        originalForm.value = JSON.parse(JSON.stringify(form));
-        
-        isSettingsSaved.value = true;
-        setTimeout(() => isSettingsSaved.value = false, 3000);
-        
-    } catch (error) {
-        console.error("Failed to update group", error);
-        toastStore.addToast("Failed to update group.", "error");
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-/**
- * Fetches full group summary including detailed orders.
- * This compensates for the shallow data returned by the dashboard list.
- */
-const refreshGroupSummary = async (updateLocalOrder = true) => {
-    try {
-        const token = authStore.token;
+        isLoadingSummary.value = true;
         const response = await axios.get(`/api/orders/group/${props.group.id}/summary`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${authStore.token}` }
         });
         
-        const summaryData = response.data;
-        
-        groupStats.value = summaryData.orderStats || [];
-        grandTotal.value = summaryData.totalGroupAmount || 0;
-        allOrders.value = summaryData.allOrders || [];
-        
-        if (updateLocalOrder) {
-            if (summaryData.myOrder) {
-                const serverItems = summaryData.myOrder.items.map(i => ({
-                    name: i.name,
-                    price: i.price,
-                    quantity: i.quantity
-                }));
-                
-                const currentItemsStr = JSON.stringify(myOrderItems.value.sort((a, b) => a.name.localeCompare(b.name)));
-                const serverItemsStr = JSON.stringify(serverItems.sort((a, b) => a.name.localeCompare(b.name)));
-                
-                if (currentItemsStr !== serverItemsStr) {
-                    myOrderItems.value = JSON.parse(JSON.stringify(serverItems));
-                    originalOrderItems.value = JSON.parse(JSON.stringify(serverItems));
-                }
-                
-                lastUpdatedTime.value = summaryData.myOrder.updatedAt;
-            } else {
-                if (myOrderItems.value.length > 0 && !isDirty.value) {
-                     myOrderItems.value = [];
-                     originalOrderItems.value = [];
-                     lastUpdatedTime.value = null;
-                } else if (myOrderItems.value.length === 0) {
-                     originalOrderItems.value = [];
-                     lastUpdatedTime.value = null;
-                }
-            }
-        }
+        fullGroupData.value = { ...props.group, ...response.data };
+        allOrders.value = response.data.allOrders || [];
         
     } catch (error) {
-        console.error('Failed to refresh group summary:', error);
+        console.error("Failed to fetch group summary", error);
     } finally {
         isLoadingSummary.value = false;
     }
 };
 
-const togglePaymentStatus = async (order) => {
-    if (!order || !isCreator.value) return;
-    
-    const newStatus = order.paymentStatus === 'PAID' ? 'UNPAID' : 'PAID';
-    isStatusUpdating.value = true;
-
-    try {
-        const token = authStore.token;
-        await axios.put(`/api/orders/${order.id}/payment-status`, {
-            status: newStatus
-        }, {
-             headers: { Authorization: `Bearer ${token}` }
-        });
-
-        order.paymentStatus = newStatus;
-
-        if (newStatus === 'PAID') {
-            toastStore.addToast("Payment marked as PAID", "success");
-        } else {
-            toastStore.addToast("Payment marked as UNPAID", "info");
-        }
-
-    } catch (err) {
-        console.error("Failed to toggle payment status", err);
-        const errorMsg = err.response?.data?.error || "Failed to update payment status";
-        toastStore.addToast(errorMsg, "error");
-    } finally {
-        isStatusUpdating.value = false;
-    }
+const handleChildUpdate = () => {
+    refreshGroupSummary();
+    emit('updated');
 };
 
-// Lifecycle Hooks
-onMounted(() => {
-    userStore.getFriends();
-    // Fetch full details whenever modal is opened
-    refreshGroupSummary(false);
-});
+// Initial fetch
+watch(() => props.group.id, refreshGroupSummary, { immediate: true });
 
-// Auto-refresh when checking summary/payment tabs
-watch(activeTab, (newTab) => {
-    if (newTab === 'summary' || newTab === 'order' || newTab === 'payments') {
-        refreshGroupSummary();
-    }
-});
 </script>
 
 <style scoped>
-* { box-sizing: border-box; }
+/* Modal Structure Styles */
 .modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  display: flex; justify-content: center; align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
+
 .modal-card {
-  background: white; width: 90%; max-width: 600px;
-  height: 80vh; /* Fixed height to prevent resizing */
-  border-radius: 15px; overflow: hidden;
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 650px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  border: 2px solid #999; color: #000;
-  display: flex; flex-direction: column;
+  overflow: hidden;
 }
+
 .modal-header {
-  padding: 15px 20px; border-bottom: 2px solid #999;
-  display: flex; justify-content: space-between; align-items: center;
-  background: #fff; color: #000;
-}
-.modal-header h2 { margin: 0; font-weight: bold; }
-.close-btn { background: none; border: none; font-size: 2rem; cursor: pointer; color: #000; }
-.modal-body { 
-    padding: 20px; 
-    flex: 1; /* Fill remaining height */
-    overflow-y: auto; /* Scroll if content exceeds height */
-    color: #000; 
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
 }
 
-/* Tabs */
+.modal-header h2 { margin: 0; font-size: 1.25rem; color: #333; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+
 .modal-tabs {
-    display: flex; border-bottom: 2px solid #999; background: #f9f9f9;
+    display: flex;
+    background: #f1f3f5;
+    padding: 0 10px;
+    border-bottom: 1px solid #ddd;
+    overflow-x: auto;
 }
+
 .tab-btn {
-    flex: 1; padding: 15px; background: none; border: none; font-weight: bold; color: #666;
-    cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;
-}
-.tab-btn.active { color: #ee4d2d; border-bottom-color: #ee4d2d; background: white; }
-.tab-btn:hover:not(.active) { background: #eee; }
-
-/* Content Areas */
-.tab-content { animation: fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Form Styles */
-.form-group { margin-bottom: 20px; }
-label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
-.input-field { width: 100%; padding: 10px; border: 2px solid #999; border-radius: 8px; font-size: 1rem; color: #000; background: #fff; }
-.input-field:disabled { background: #f0f0f0; border-color: #999; }
-.time-inputs { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; } 
-.time-inputs .input-field { flex: 1; max-width: 225px; font-size: 0.9rem; padding: 8px; }
-
-/* Members Section */
-.members-container {
-    display: flex; flex-wrap: wrap; gap: 10px; padding: 10px;
-    border: 2px solid #999; border-radius: 8px; min-height: 50px;
-    align-items: center; background: #fff;
-}
-.member-chip {
-    display: flex; align-items: center; background: #f0f0f0;
-    border-radius: 20px; padding: 5px 12px; font-size: 0.9rem; gap: 8px;
-    border: 2px solid #999;
-    color: #333;
-}
-.member-name { font-weight: 500; }
-.creator-name { color: #ee4d2d; font-weight: bold; }
-.remove-member-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; line-height: 1; color: #888; padding: 0; display: flex; align-items: center; }
-.remove-member-btn:hover { color: #ff4d4d; }
-.invite-btn {
-    background: white; border: 2px solid #999; border-radius: 20px;
-    padding: 5px 12px; cursor: pointer; font-size: 0.85rem; font-weight: bold; color: #000;
-}
-.invite-btn:hover { background: #f0f0f0; }
-.dropdown-backdrop {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    z-index: 50; cursor: default; background: transparent;
-}
-.friend-selection-list {
-    margin-top: 10px; border: 2px solid #999; border-radius: 8px;
-    max-height: 150px; overflow-y: auto; background: white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; z-index: 51;
-}
-.friend-option { padding: 8px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 2px solid #eee; }
-.friend-option:hover { background-color: #f5f5f5; }
-.friend-option.selected { background-color: #fff0eb; color: #ee4d2d; }
-.friend-avatar-small { width: 24px; height: 24px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: #555; }
-.check-mark { margin-left: auto; font-weight: bold; }
-.no-friends-msg { padding: 15px; text-align: center; color: #666; font-size: 0.9rem; }
-
-/* Menu Section */
-.menu-section { margin-top: 25px; border-top: 2px solid #999; padding-top: 20px; }
-.menu-table { border: 2px solid #999; border-radius: 8px; margin-bottom: 15px; overflow: hidden; background: #fff; }
-.table-header, .table-row { display: grid; grid-template-columns: 2fr 1fr 0.5fr; padding: 10px; gap: 10px; align-items: center; }
-.table-header { background: #eee; border-bottom: 2px solid #999; font-weight: bold; color: #000; }
-.table-row { border-bottom: 2px solid #999; }
-.table-row:last-child { border-bottom: none; }
-.small { padding: 8px; border: 2px solid #999; }
-.remove-btn { background: #ff4d4d; color: white; border: none; border-radius: 4px; cursor: pointer; height: 30px; width: 30px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-.remove-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
-.add-btn { width: 100%; padding: 12px; background: #eee; border: 2px solid #999; border-radius: 8px; cursor: pointer; font-weight: bold; color: #000; }
-.add-btn:hover { background: #ddd; }
-.form-actions { 
-    margin-top: 25px; 
-    display: flex; 
-    justify-content: flex-end; 
-    align-items: center; 
-    gap: 15px; 
-}
-.submit-btn { background: #ee4d2d; color: white; padding: 12px 30px; border: none; border-radius: 50px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-.submit-btn:hover:not(:disabled) { background: #d73211; }
-.submit-btn:disabled { background: #ccc; cursor: not-allowed; }
-
-/* My Order Styles */
-.order-selection-area { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #999; }
-.selection-row { display: flex; gap: 10px; margin-top: 10px; }
-.qty-input { width: 80px; }
-.add-order-btn { background: #333; color: white; border: none; border-radius: 8px; padding: 0 20px; cursor: pointer; font-weight: bold; }
-.add-order-btn:disabled { background: #999; cursor: not-allowed; }
-
-.my-order-list .order-table { margin-top: 10px; }
-.order-table .table-header, .order-table .table-row { 
-    grid-template-columns: 1fr 1fr 1fr 0.5fr !important; /* Equal width for first 3, smaller action */
-    justify-items: center; /* Center content horizontally */
-    align-items: center;   /* Center content vertically */
-} 
-.order-total { text-align: right; font-size: 1.2rem; font-weight: bold; margin-top: 10px; }
-
-/* Qty Control Styles */
-.qty-control {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-.last-updated {
-    font-size: 0.85rem;
-    color: #888;
-    font-style: italic;
-}
-
-.qty-btn {
-    width: 25px;
-    height: 25px;
-    background: #e0e0e0;
-    border: 1px solid #999;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.qty-btn:hover { background: #d0d0d0; }
-.qty-input-small {
-    width: 40px;
-    text-align: center;
-    padding: 2px;
-    border: 1px solid #999;
-    border-radius: 4px;
-}
-.price { color: #ee4d2d; }
-.empty-msg { padding: 20px; text-align: center; color: #999; grid-column: 1 / -1; }
-
-/* Summary Table Enhancements */
-.summary-table .table-header, .summary-table .table-row {
-     display: grid;
-     grid-template-columns: repeat(4, 1fr) !important; /* Force 4 columns equal width */
-     align-items: center; /* Vertically center */
-     gap: 10px;
-}
-.grand-total { font-size: 1.4rem; font-weight: bold; margin-top: 20px; text-align: right; border-top: 2px solid #999; padding-top: 15px; }
-
-/* Modal Footer (Standardized) */
-.modal-footer {
-    padding: 15px 20px; border-top: 2px solid #999; background: #fff; 
-    display: flex; justify-content: flex-end; align-items: center; gap: 15px;
-}
-
-.status-badge {
-    padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;
-}
-.status-badge.paid { background-color: #d4edda; color: #155724; }
-.status-badge.unpaid { background-color: #f8d7da; color: #721c24; }
-
-.status-btn {
-    padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; cursor: pointer; border: 1px solid transparent; width: 70px;
-}
-.status-btn.paid { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
-.status-btn.unpaid { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
-.status-btn.disabled { opacity: 0.7; cursor: default; }
-
-.creator-tag {
-    font-size: 0.8rem;
-    color: #ee4d2d;
-    margin-left: 5px;
-}
-
-/* Animations */
-
-.time-label-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 15px;
-    margin-bottom: 8px;
-}
-.time-label-row label {
-    margin-bottom: 0;
-}
-
-.status-control {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: 0;
-    flex-shrink: 0;
-}
-
-.status-toggle-pill-dashboard {
-    padding: 2px 10px;
+    padding: 12px 16px;
+    background: none;
     border: none;
-    border-radius: 20px;
+    border-bottom: 3px solid transparent;
     cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: bold;
-    transition: all 0.2s;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    min-width: 80px;
-    text-align: center;
+    font-weight: 600;
+    color: #666;
     white-space: nowrap;
-    flex-shrink: 0;
-}
-.status-toggle-pill-dashboard.open {
-    background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
-}
-.status-toggle-pill-dashboard.closed {
-    background-color: #6c757d; color: white; border: 1px solid #5a6268;
 }
 
+.tab-btn:hover { color: #339af0; }
+.tab-btn.active { border-bottom-color: #228be6; color: #228be6; }
+
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 60px; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: #666;
+    z-index: 100;
+}
 </style>
