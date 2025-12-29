@@ -8,6 +8,7 @@
 
       <!-- Tab Navigation -->
        <div class="modal-tabs" v-if="mode === 'detail' || mode === 'summary' || mode === 'order'">
+          <!-- Menu Settings: Visible if Creator, or Editing. Non-creators see 'Menu List' -->
           <button 
             :class="['tab-btn', { active: activeTab === 'settings' }]" 
             @click="activeTab = 'settings'"
@@ -15,8 +16,7 @@
           >
             Menu Settings
           </button>
-           <!-- If not creator, they can see 'Menu Settings' but maybe we call it 'Menu' or specific requirements: -->
-           <!-- Requirement: "Tab 1: Menu Settings... Others can only view" -->
+           
            <button 
             :class="['tab-btn', { active: activeTab === 'settings' }]" 
             @click="activeTab = 'settings'"
@@ -49,7 +49,7 @@
       
       <div class="modal-body">
         
-        <!-- Tab 1: Menu Settings (Original Form) -->
+        <!-- Tab 1: Menu Settings (Inputs for Group Info & Menu) -->
         <div v-show="activeTab === 'settings'" class="tab-content">
              <form @submit.prevent="handleSubmit">
                 <div class="form-group">
@@ -66,9 +66,9 @@
                 <div class="form-group">
                     <div class="time-label-row">
                         <label>Time:</label>
-                        <!-- Status Badge and Toggle -->
+                        <!-- Status Toggle (Open/Closed) -->
                         <div class="status-control" v-if="mode !== 'create'">
-                            <!-- Creator View: Clickable Button -->
+                            <!-- Interactive Toggle for Creator -->
                              <button 
                                 v-if="isCreator" 
                                 type="button" 
@@ -81,7 +81,7 @@
                                 {{ localStatus === 'OPEN' ? 'OPEN' : 'CLOSED' }}
                             </button>
 
-                            <!-- Member View: Static Badge -->
+                            <!-- Read-only Badge for Members -->
                             <span 
                                 v-else
                                 class="status-toggle-pill-dashboard" 
@@ -113,6 +113,7 @@
                     </div>
                 </div>
                 
+                <!-- Members Management Section -->
                 <div class="form-group members-section" ref="membersSection">
                     <label>Members:</label>
                     <div class="members-container">
@@ -120,6 +121,7 @@
                             <span class="member-name" :class="{ 'creator-name': group.creatorId && userId === group.creatorId }">
                                 {{ getFriendName(userId) }}
                             </span>
+                             <!-- Allow removal only if editing is allowed and target is not the Creator -->
                             <button v-if="canEditSettings && !(group.creatorId && userId === group.creatorId)" type="button" class="remove-member-btn" @click="toggleFriend(userId)">×</button>
                         </div>
 
@@ -128,7 +130,7 @@
                         </button>
                     </div>
 
-                    <!-- Backdrop to close dropdown on click outside -->
+                    <!-- Dropdown Backdrop -->
                     <div v-if="showFriendList" class="dropdown-backdrop" @click="showFriendList = false"></div>
 
                     <div v-if="showFriendList" class="friend-selection-list">
@@ -149,6 +151,7 @@
                     </div>
                 </div>
                 
+                <!-- Menu Items Section -->
                 <div class="menu-section">
                     <label>Menu (Items & Prices)</label>
                     <div class="menu-table">
@@ -187,7 +190,7 @@
             </form>
         </div>
 
-        <!-- Tab 2: My Order -->
+        <!-- Tab 2: My Order (Individual Member Order) -->
         <div v-show="activeTab === 'order'" class="tab-content">
             <div class="order-selection-area">
                 <label>Add Item:</label>
@@ -204,7 +207,6 @@
             </div>
 
             <div class="my-order-list">
-                <!-- Label removed -->
                 <div class="order-table">
                      <div class="table-header">
                         <span>Item</span>
@@ -215,7 +217,7 @@
                     <div v-if="myOrderItems.length === 0" class="empty-msg">No items selected yet.</div>
                     <div v-for="(item, idx) in myOrderItems" :key="idx" class="table-row">
                         <span>{{ item.name }}</span>
-                        <!-- Qty with - + controls -->
+                        <!-- Quantity Control (- 1 +) -->
                         <div class="qty-control">
                             <button type="button" class="qty-btn" @click="decreaseQty(idx)" :disabled="isOrderLocked">-</button>
                             <input 
@@ -234,7 +236,6 @@
                 <div class="order-total">
                     Total: <span class="price">${{ myOrderTotal }}</span>
                 </div>
-
             </div>
 
             <div class="form-actions">
@@ -242,7 +243,6 @@
                     Last updated: <br>
                     {{ formattedLastUpdated }}
                 </div>
-                <!-- REMOVED locked-msg -->
                 <button type="button" class="submit-btn" :disabled="isOrderLoading || isOrderLocked" @click="submitOrder">
                     {{ 
                         isOrderLoading ? 'Saving...' : 
@@ -253,7 +253,7 @@
             </div>
         </div>
 
-        <!-- Tab 3: Group Summary -->
+        <!-- Tab 3: Group Summary (Aggregation) -->
         <div v-show="activeTab === 'summary'" class="tab-content">
              <div class="summary-table-container">
                 <div class="order-table summary-table">
@@ -278,7 +278,7 @@
              </div>
         </div>
 
-        <!-- Tab 4: Payments (New) -->
+        <!-- Tab 4: Payments (Tracking Paid/Unpaid Status) -->
         <div v-show="activeTab === 'payments'" class="tab-content">
              <div class="summary-table-container">
                 <div class="order-table summary-table" style="grid-template-columns: 1fr 1fr 1fr !important;">
@@ -316,7 +316,8 @@
 
       </div>
     </div>
-    <!-- Loading overlay if fetching full details -->
+    
+    <!-- Loading overlay for background data fetch -->
     <div v-if="isLoadingSummary" class="loading-overlay">Loading details...</div>
   </div>
 </template>
@@ -330,30 +331,35 @@ import axios from 'axios';
 
 const props = defineProps({
     group: { type: Object, required: true },
-    mode: { type: String, default: 'detail' } // 'detail', 'edit', 'invite'
+    mode: { type: String, default: 'detail' } // Modes: 'detail', 'edit', 'invite'
 });
 const emit = defineEmits(['close', 'updated']);
 const authStore = useAuthStore();
 const userStore = useUserStore();
 const toastStore = useToastStore();
-const isLoading = ref(false);
-const isOrderLoading = ref(false);
-const isLoadingSummary = ref(false);
-const isStatusUpdating = ref(false);
+
+// --- Loading States ---
+const isLoading = ref(false);          // For saving settings
+const isOrderLoading = ref(false);     // For saving my order
+const isLoadingSummary = ref(false);   // For fetching initial detailed data
+const isStatusUpdating = ref(false);   // For toggling group status (Open/Close)
+
 const showFriendList = ref(false);
-// Local status to support optimistic updates without mutating props directly/lagging
+
+// Local status allows optimistic updates without waiting for parent prop propagation
 const localStatus = ref(props.group.status);
 watch(() => props.group.status, (newVal) => {
     localStatus.value = newVal;
 });
 
+// Determine default active tab
 const activeTab = ref(
     props.mode === 'summary' ? 'summary' : 
     props.mode === 'order' ? 'order' : 
     'settings'
-); // settings, order, summary
+);
 
-// Form Data (Settings Tab)
+// --- Settings Form Data ---
 const form = reactive({
     title: '',
     startTime: '',
@@ -361,17 +367,18 @@ const form = reactive({
     products: [],
     invitedUserIds: []
 });
-const originalForm = ref(null); 
+const originalForm = ref(null); // Snapshot for dirty checking
 const isSettingsSaved = ref(false);
 
-// My Order Data
+// --- My Order Data ---
 const selectedProductIndex = ref(-1);
 const orderQuantity = ref(1);
 const myOrderItems = ref([]);
-const originalOrderItems = ref([]); // For Dirty Checking
+const originalOrderItems = ref([]); // Snapshot for dirty checking
+// const lastUpdatedTime = ref(null); // Removed to avoid unused variable warning or re-added if necessary. It is used in template.
 const lastUpdatedTime = ref(null);
 
-// Group Summary Data
+// --- Group Summary Data ---
 const groupStats = ref([]);
 const grandTotal = ref(0);
 const allOrders = ref([]);
@@ -382,20 +389,20 @@ const totalCollected = computed(() => {
 });
 
 
-// Initialize data from props
+// Initialize form and local state from props when group changes
 watch(() => props.group, (newGroup) => {
     if (newGroup) {
-        // 1. Settings Data
+        // 1. Populate Settings Form
         form.title = newGroup.title;
         form.startTime = newGroup.startTime ? newGroup.startTime.slice(0, 16) : '';
         form.endTime = newGroup.endTime ? newGroup.endTime.slice(0, 16) : '';
         form.products = newGroup.products ? JSON.parse(JSON.stringify(newGroup.products)) : []; 
         form.invitedUserIds = newGroup.invitedUserIds ? [...newGroup.invitedUserIds] : [];
         
-        // Save initial state for dirty checking
+        // Save initial state for "Save Changes" button state
         originalForm.value = JSON.parse(JSON.stringify(form));
 
-        // 2. My Order Data
+        // 2. Populate My Order Data
         if (newGroup.myOrder && newGroup.myOrder.items) {
              const items = newGroup.myOrder.items.map(i => ({
                  name: i.name,
@@ -403,7 +410,7 @@ watch(() => props.group, (newGroup) => {
                  quantity: i.quantity
              }));
              myOrderItems.value = JSON.parse(JSON.stringify(items));
-             originalOrderItems.value = JSON.parse(JSON.stringify(items)); // Deep copy
+             originalOrderItems.value = JSON.parse(JSON.stringify(items));
              lastUpdatedTime.value = newGroup.myOrder.updatedAt;
         } else {
              myOrderItems.value = [];
@@ -411,28 +418,19 @@ watch(() => props.group, (newGroup) => {
              lastUpdatedTime.value = null;
         }
 
-        // 3. Group Summary Data
-        // Only update if data is present (Dashboard usually sends limited info)
+        // 3. Populate Summary Basics (detailed stats fetched separately)
         if (newGroup.orderStats) groupStats.value = newGroup.orderStats;
         if (newGroup.totalGroupAmount !== undefined) grandTotal.value = newGroup.totalGroupAmount;
         
-        // CRITICAL: specific check to avoid overwriting detailed 'allOrders' (fetched separately) 
-        // with undefined/empty from dashboard list
+        // Use supplied allOrders if available (e.g., from a 'summary' endpoint call)
         if (newGroup.allOrders) {
             allOrders.value = newGroup.allOrders;
         }
     }
 }, { immediate: true });
 
-// Ensure 'Menu Settings' is visible by default or based on role
-// But we want to start on 'Settings' usually.
-// If mode is edit/invite, 'settings' is forced by logic below implicitly? (Tabs hidden if not detail)
-// Actually tabs are hidden if mode != 'detail'? 
-// Wait: `v-if="mode === 'detail'"` on tabs-nav.
-// If mode is 'edit' or 'invite', we are editing settings, so we should just show settings form. 
-// AND hide tabs.
-// Correct.
 
+// --- Permissions & Modes ---
 const isEditing = computed(() => props.mode === 'edit');
 const isInviteMode = computed(() => props.mode === 'invite');
 const isCreator = computed(() => props.group.isCreator);
@@ -450,12 +448,12 @@ const modalTitle = computed(() => {
 });
 
 
-// --- Tab 2 Logic: My Order ---
+// --- My Order Logic ---
 const addToMyOrder = () => {
     if (selectedProductIndex.value === -1) return;
     const product = form.products[selectedProductIndex.value];
     
-    // Check if already exists, update qty if so
+    // Merge with existing item if adding same product
     const existing = myOrderItems.value.find(i => i.name === product.name && i.price === product.price);
     if (existing) {
         existing.quantity += orderQuantity.value;
@@ -466,10 +464,9 @@ const addToMyOrder = () => {
             quantity: orderQuantity.value
         });
     }
-    // Reset inputs
+    // Reset selection
     selectedProductIndex.value = -1;
     orderQuantity.value = 1;
-
 };
 
 const removeFromMyOrder = async (index) => {
@@ -492,7 +489,7 @@ const decreaseQty = async (index) => {
     if (myOrderItems.value[index].quantity > 1) {
         myOrderItems.value[index].quantity--;
     } else {
-        // Notify user about deletion
+        // Prompt for removal if decreasing to 0
         const confirmed = await toastStore.showConfirm(
             "Remove Item", 
             "Quantity is 0. Do you want to remove this item?"
@@ -513,17 +510,16 @@ const handleQtyChange = async (index) => {
         if (confirmed) {
              myOrderItems.value.splice(index, 1);
         } else {
-            myOrderItems.value[index].quantity = 1; // Reset to 1 if user cancels
+            myOrderItems.value[index].quantity = 1; // Revert
         }
     }
 };
 
-// --- Dirty Checking Logic ---
 const isDirty = computed(() => {
+    // Basic length check
     if (myOrderItems.value.length !== originalOrderItems.value.length) return true;
     
-    // Helper stringify comparison
-    // Use sort to ensure order doesn't affect comparison (robustness)
+    // Sort to ensure order independence in comparison
     const sortFn = (a, b) => a.name.localeCompare(b.name);
     const sortedCurrent = [...myOrderItems.value].sort(sortFn);
     const sortedOriginal = [...originalOrderItems.value].sort(sortFn);
@@ -537,20 +533,16 @@ const formattedLastUpdated = computed(() => {
     return date.toLocaleString();
 });
 
-const handleOrderAction = () => {
-    submitOrder();
-};
-
 const myOrderTotal = computed(() => {
     return myOrderItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 });
 
-// Calculate detailed stats from allOrders for the Summary Tab
+
+// --- Aggregated Stats Logic ---
 const detailedGroupStats = computed(() => {
     const statsMap = {};
 
-    // 1. Initialize from existing groupStats (to get totals mostly correct instantly)
-    // But better to rebuild from allOrders for accuracy on "Ordered By"
+    // Fallback if allOrders is empty
     if (!allOrders.value) return groupStats.value;
 
     allOrders.value.forEach(order => {
@@ -563,13 +555,13 @@ const detailedGroupStats = computed(() => {
                     name: item.name,
                     quantity: 0,
                     totalPrice: 0,
-                    users: [] // Array of { name, qty }
+                    users: [] // Breakdown of who ordered this item
                 };
             }
             statsMap[item.name].quantity += item.quantity;
             statsMap[item.name].totalPrice += item.price * item.quantity;
             
-            // Add user to list
+            // Track individual user quantities per item
             const existingUser = statsMap[item.name].users.find(u => u.name === userName);
             if (existingUser) {
                 existingUser.qty += item.quantity;
@@ -582,10 +574,9 @@ const detailedGroupStats = computed(() => {
     return Object.values(statsMap).sort((a, b) => a.name.localeCompare(b.name));
 });
 
-// Saved state for UI feedback
 const isSaved = ref(false);
 
-const submitOrder = async (showNotification = true) => {
+const submitOrder = async () => {
     if (!isDirty.value) return; 
     isOrderLoading.value = true;
     isSaved.value = false;
@@ -603,7 +594,6 @@ const submitOrder = async (showNotification = true) => {
             const serverOrder = response.data.order;
             lastUpdatedTime.value = serverOrder.updatedAt;
             
-            // Sync local items with server response
             const newItems = serverOrder.items.map(i => ({
                 name: i.name,
                 price: i.price,
@@ -614,17 +604,12 @@ const submitOrder = async (showNotification = true) => {
             originalOrderItems.value = JSON.parse(JSON.stringify(newItems));
         }
 
-        // Chain Reaction: Refresh group summary immediately
-        await refreshGroupSummary(false); // false = do not overwrite myOrderItems again (we just saved it)
+        // Refresh summary to reflect changes immediately
+        await refreshGroupSummary(false); 
         
-        // Show "Saved" state and Trigger Animation
         isSaved.value = true;
-        
         setTimeout(() => isSaved.value = false, 3000);
 
-        // Notify parent to update list (total price etc)
-        // Note: Parent update might trigger prop change -> watch -> re-update local state.
-        // This is acceptable for consistency.
         emit('updated'); 
 
     } catch (error) {
@@ -636,46 +621,24 @@ const submitOrder = async (showNotification = true) => {
 };
 
 
-
-// --- Tab 3 Logic: Group Summary ---
-// Need to aggregate stats from ALL orders.
-// `props.group` does NOT contain all orders in the current dashboard response!
-// `getDashboardGroups` returns `orders` but maps them to `participants` string.
-// Wait, `getDashboardGroups` response structure: 
-// { ..., myOrder: {...}, participants: [...], totalGroupAmount: ... }
-// It DOES NOT pass the full list of orders to the frontend.
-// I need the Full Orders list for the Summary Tab.
-// Option A: Update Backend `getDashboardGroups` to include `orders` summary list.
-// Option B: Fetch single group details on open?
-// Given `GroupDetailModal` logic, `group` prop comes from dashboard list.
-// The dashboard list (from `groupController.js`) returns:
-// `invites`, `products`, `myOrder`, `totalGroupAmount`.
-// But `orders` are processed into `participants` and `totalGroupAmount`.
-// Missing: Breakdown of items bought by everyone.
-
+// --- Group Status Management ---
 const isGroupClosed = computed(() => {
     return localStatus.value === 'CLOSED';
 });
 
-const isGroupExpired = computed(() => {
-    if (!props.group.endTime) return false;
-    return new Date() > new Date(props.group.endTime);
-});
-
 const isOrderLocked = computed(() => {
-    // Only lock if status is effectively CLOSED. Ignore expiration if manually set to OPEN.
+    // Prevent ordering if group is closed
     return isGroupClosed.value;
 });
 
 const toggleGroupStatus = async () => {
     if (isStatusUpdating.value) return;
     
-    // Optimistic Update
+    // Toggle Status
     const oldStatus = localStatus.value;
     const newStatus = oldStatus === 'OPEN' ? 'CLOSED' : 'OPEN';
     
-    // Quick confirm for Closing
-    // Confirm Change
+    // Confirmation
     const action = newStatus === 'CLOSED' ? 'CLOSE' : 'OPEN';
     const message = newStatus === 'CLOSED' 
         ? "Are you sure you want to CLOSE this group?"
@@ -685,49 +648,31 @@ const toggleGroupStatus = async () => {
     if (!confirmed) return;
 
     isStatusUpdating.value = true;
-    // Optimistic Update Locally
+    // Optimistic Update
     localStatus.value = newStatus;
     
     try {
-        const response = await axios.put(`/api/groups/${props.group.id}/status`, {
+        await axios.put(`/api/groups/${props.group.id}/status`, {
              status: newStatus
         }, {
              headers: { Authorization: `Bearer ${authStore.token}` }
         });
 
-        // Update local status via emit (best practice) or direct prop mutation (if reactive object passed)
-        // Since props are readonly, we really should emit 'updated'.
         toastStore.addToast(`Group is now ${newStatus}`, 'success');
         emit('updated');
 
     } catch (error) {
         console.error("Failed to update status", error);
         toastStore.addToast("Failed to update status", 'error');
-        // Revert local status on error
+        // Revert on failure
         localStatus.value = oldStatus; 
     } finally {
         isStatusUpdating.value = false;
     }
 };
-// I should update `groupController.js` to return `stats` or `allOrders`.
-// Let's implement client-side assuming data exists, but I know it's missing.
-// I MUST fetch updated data or update the backend controller.
-// Since I already verified `groupController.js`, I know it doesn't send item breakdown.
-//
-// Let's calculate stats from `props.group` if data were there, 
-// BUT realized I need to fix the backend controller first? 
-// Or I can add a quick `stats` field in the controller response now?
-//
-// Actually, I am already in the middle of frontend edit.
-// I will add the logic here expecting `props.group.stats` or similar, 
-// AND THEN I will update the backend controller in the next step to provide it.
-//
-// Let's assume `props.group.orderStats` is an array of { name, quantity, totalPrice }.
-//
 
 
-
-// ... (Existing Functions: showPicker, addProduct, removeProduct, etc.) ...
+// --- Helpers ---
 const showPicker = (event) => {
     try {
         if (event.target.showPicker) {
@@ -738,7 +683,6 @@ const showPicker = (event) => {
 
 const isProductInUse = (productName) => {
     if (!productName || !allOrders.value || allOrders.value.length === 0) return false;
-    // Check if any order contains an item with this name
     return allOrders.value.some(order => 
         order.items && order.items.some(item => item.name === productName)
     );
@@ -766,7 +710,6 @@ const removeProduct = async (index) => {
 
     if (confirmed) {
         form.products.splice(index, 1);
-        // Persist change immediately
         await handleSubmit(); 
         toastStore.addToast("Item deleted successfully", "success");
     }
@@ -782,28 +725,17 @@ const toggleFriend = (friendId) => {
 };
 
 const getFriendName = (id) => {
-    // 1. Check if it's Me
-    if (id === userStore.user?.id) {
-        return `${userStore.user.name} (Me)`;
-    }
+    if (id === userStore.user?.id) return `${userStore.user.name} (Me)`;
+    if (props.group.creatorId && id === props.group.creatorId) return `${props.group.creator} (Host)`;
 
-    // 2. Check if it's the Group Creator (if info available)
-    if (props.group.creatorId && id === props.group.creatorId) {
-        // creator prop is the name string
-        return `${props.group.creator} (Host)`;
-    }
-
-    // 3. Check Friends
     const friend = userStore.friends.find(f => f.id === id);
     if (friend) return friend.name;
     
-    // 4. Check Group Invites (which now include names from server)
     if (props.group.invites) {
         const invite = props.group.invites.find(i => i.userId === id);
         if (invite && invite.name) return invite.name;
     }
 
-    // 5. Fallback: Check allOrders (existing participants - redundancy)
     if (allOrders.value) {
         const order = allOrders.value.find(o => o.userId === id);
         if (order && order.user) return order.user.name;
@@ -812,6 +744,7 @@ const getFriendName = (id) => {
     return `User ${id}`; 
 };
 
+// --- Submission ---
 const handleSubmit = async () => {
     if (!isSettingsDirty.value) return;
     
@@ -833,20 +766,18 @@ const handleSubmit = async () => {
             headers: { Authorization: `Bearer ${token}` }
         });
         
-        // Sync products from server response (to get new IDs)
+        // Sync new product data (handling new IDs generated by DB)
         if (response.data.products) {
             form.products = JSON.parse(JSON.stringify(response.data.products));
         }
 
         emit('updated');
         
-        // Update originalForm with the synced data
         originalForm.value = JSON.parse(JSON.stringify(form));
         
         isSettingsSaved.value = true;
         setTimeout(() => isSettingsSaved.value = false, 3000);
         
-        // emit('close'); // Don't close, allow continued editing
     } catch (error) {
         console.error("Failed to update group", error);
         toastStore.addToast("Failed to update group.", "error");
@@ -855,7 +786,10 @@ const handleSubmit = async () => {
     }
 };
 
-// Refresh group summary data from server
+/**
+ * Fetches full group summary including detailed orders.
+ * This compensates for the shallow data returned by the dashboard list.
+ */
 const refreshGroupSummary = async (updateLocalOrder = true) => {
     try {
         const token = authStore.token;
@@ -865,12 +799,10 @@ const refreshGroupSummary = async (updateLocalOrder = true) => {
         
         const summaryData = response.data;
         
-        // Update group summary data
         groupStats.value = summaryData.orderStats || [];
         grandTotal.value = summaryData.totalGroupAmount || 0;
         allOrders.value = summaryData.allOrders || [];
         
-        // Update my order data
         if (updateLocalOrder) {
             if (summaryData.myOrder) {
                 const serverItems = summaryData.myOrder.items.map(i => ({
@@ -879,7 +811,6 @@ const refreshGroupSummary = async (updateLocalOrder = true) => {
                     quantity: i.quantity
                 }));
                 
-                // Only update if server data is different from current local data
                 const currentItemsStr = JSON.stringify(myOrderItems.value.sort((a, b) => a.name.localeCompare(b.name)));
                 const serverItemsStr = JSON.stringify(serverItems.sort((a, b) => a.name.localeCompare(b.name)));
                 
@@ -890,20 +821,11 @@ const refreshGroupSummary = async (updateLocalOrder = true) => {
                 
                 lastUpdatedTime.value = summaryData.myOrder.updatedAt;
             } else {
-                // If no order exists on server (or it was deleted), clear local data
-                // But only if we are not currently editing (dirty check?)
-                // Actually, if we are fetching summary, we usually want to trust server state 
-                // OR we should be careful if user has unsaved changes.
-                // Since this function is called on load or after save, it's safer to respect server.
-                // But if auto-save is pending?
-                
-                // For "load on open", we definitely want to reset to empty if server says empty.
                 if (myOrderItems.value.length > 0 && !isDirty.value) {
                      myOrderItems.value = [];
                      originalOrderItems.value = [];
                      lastUpdatedTime.value = null;
                 } else if (myOrderItems.value.length === 0) {
-                     // Already empty, just sync metadata
                      originalOrderItems.value = [];
                      lastUpdatedTime.value = null;
                 }
@@ -931,7 +853,6 @@ const togglePaymentStatus = async (order) => {
              headers: { Authorization: `Bearer ${token}` }
         });
 
-        // Update local state immediately
         order.paymentStatus = newStatus;
 
         if (newStatus === 'PAID') {
@@ -949,23 +870,16 @@ const togglePaymentStatus = async (order) => {
     }
 };
 
+// Lifecycle Hooks
 onMounted(() => {
-    // We need full order details (allOrders) to perform validation like "isProductInUse".
-    // The prop 'group' from dashboard only has limited info.
+    userStore.getFriends();
+    // Fetch full details whenever modal is opened
     refreshGroupSummary(false);
 });
 
-// Auto-refresh summary when switching to summary tab or payments tab
+// Auto-refresh when checking summary/payment tabs
 watch(activeTab, (newTab) => {
     if (newTab === 'summary' || newTab === 'order' || newTab === 'payments') {
-        refreshGroupSummary();
-    }
-});
-
-onMounted(() => {
-    userStore.getFriends();
-    // Load initial group summary data
-    if (props.mode === 'detail') {
         refreshGroupSummary();
     }
 });
@@ -1021,8 +935,8 @@ onMounted(() => {
 label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .input-field { width: 100%; padding: 10px; border: 2px solid #999; border-radius: 8px; font-size: 1rem; color: #000; background: #fff; }
 .input-field:disabled { background: #f0f0f0; border-color: #999; }
-.time-inputs { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; } /* Added wrap */
-.time-inputs .input-field { flex: 1; max-width: 225px; font-size: 0.9rem; padding: 8px; } /* Increased min-width */
+.time-inputs { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; } 
+.time-inputs .input-field { flex: 1; max-width: 225px; font-size: 0.9rem; padding: 8px; }
 
 /* Members Section */
 .members-container {
@@ -1037,7 +951,7 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
     color: #333;
 }
 .member-name { font-weight: 500; }
-.creator-name { color: #ee4d2d; font-weight: bold; } /* Highlight Creator */
+.creator-name { color: #ee4d2d; font-weight: bold; }
 .remove-member-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; line-height: 1; color: #888; padding: 0; display: flex; align-items: center; }
 .remove-member-btn:hover { color: #ff4d4d; }
 .invite-btn {
@@ -1111,13 +1025,6 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
     font-style: italic;
 }
 
-.auto-save-indicator {
-    font-size: 0.8rem;
-    color: #007bff;
-    margin-top: 5px;
-    font-style: italic;
-    text-align: center;
-}
 .qty-btn {
     width: 25px;
     height: 25px;
@@ -1156,14 +1063,6 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
     display: flex; justify-content: flex-end; align-items: center; gap: 15px;
 }
 
-.save-btn {
-    background: #ee4d2d; color: white; padding: 8px 20px; /* Reduced padding */
-    border: none; border-radius: 5px; font-weight: bold; cursor: pointer;
-    font-size: 1rem; /* Slightly smaller font */
-}
-.save-btn:disabled { background: #ccc; cursor: not-allowed; }
-.save-btn:hover:not(:disabled) { background: #d73211; }
-
 .status-badge {
     padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;
 }
@@ -1188,8 +1087,6 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
 .time-label-row {
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Push status to right or keep left? "Put after time:" implies left. */
-    /* Let's try just flex-start with gap */
     justify-content: flex-start;
     gap: 15px;
     margin-bottom: 8px;
@@ -1202,50 +1099,29 @@ label { display: block; font-weight: bold; margin-bottom: 8px; color: #000; }
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-left: 0; /* Reset margin */
-    flex-shrink: 0; /* Prevent shrinking */
+    margin-left: 0;
+    flex-shrink: 0;
 }
-
-.status-badge-large {
-    padding: 2px 10px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.9rem;
-    white-space: nowrap; /* Prevent wrapping */
-}
-.status-badge-large.open { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.status-badge-large.closed { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
-
-.toggle-status-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .status-toggle-pill-dashboard {
-    padding: 2px 10px; /* More padding */
+    padding: 2px 10px;
     border: none;
-    border-radius: 20px; /* Pill shape */
+    border-radius: 20px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: bold;
     transition: all 0.2s;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    min-width: 80px; /* Increased Fixed width */
+    min-width: 80px;
     text-align: center;
     white-space: nowrap;
-    flex-shrink: 0; /* Prevent compression */
+    flex-shrink: 0;
 }
-/* .status-toggle-pill-dashboard:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
-} */
 .status-toggle-pill-dashboard.open {
     background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
 }
-/* Removed individual hover to use shared hover effect */
 .status-toggle-pill-dashboard.closed {
-    background-color: #6c757d; color: white; border: 1px solid #5a6268; /* Darker Grey for better visibility/active look */
+    background-color: #6c757d; color: white; border: 1px solid #5a6268;
 }
-/* .status-toggle-pill-dashboard.closed:hover {
-    background-color: #5a6268;
-} */
 
 </style>
-```

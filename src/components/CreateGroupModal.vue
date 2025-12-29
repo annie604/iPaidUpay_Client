@@ -30,7 +30,7 @@
       
       <div class="modal-body">
         
-        <!-- Tab 1: Menu Settings (Original Form) -->
+        <!-- Tab 1: Menu Settings (Group Info & Products) -->
         <div v-show="activeTab === 'settings'" class="tab-content">
             <form id="create-group-form" @submit.prevent="handleSubmit">
                 <div class="form-group">
@@ -70,23 +70,24 @@
                 <div class="form-group members-section">
                     <label>Members:</label>
                     <div class="members-container">
-                        <!-- Creator (Me) Chip -->
+                        <!-- Creator is always added by default -->
                         <div class="member-chip">
                              <span class="member-name creator-name">{{ userStore.user?.name }} (Host)</span>
                         </div>
 
-                        <!-- Selected Friends (Chips) -->
+                        <!-- Invited Friends List -->
                         <div v-for="friendId in form.invitedUserIds" :key="friendId" class="member-chip">
                             <span class="member-name">{{ getFriendName(friendId) }}</span>
                             <button type="button" class="remove-member-btn" @click="toggleFriend(friendId)">×</button>
                         </div>
 
-                        <!-- Invite Button -->
+                        <!-- Add Member Trigger -->
                         <button type="button" class="invite-btn" @click="showFriendList = !showFriendList">
                             Invite +
                         </button>
                     </div>
 
+                    <!-- Friend Selection Dropdown -->
                     <div v-if="showFriendList" class="dropdown-backdrop" @click="showFriendList = false"></div>
 
                     <div v-if="showFriendList" class="friend-selection-list">
@@ -126,7 +127,7 @@
             </form>
         </div>
 
-        <!-- Tab 2: My Order -->
+        <!-- Tab 2: My Order (Creator's Initial Order) -->
         <div v-show="activeTab === 'order'" class="tab-content">
              <div class="order-selection-area">
                 <label>Add Item:</label>
@@ -160,7 +161,7 @@
                     </div>
                     <div v-for="(item, idx) in myOrderItems" :key="idx" class="table-row">
                         <span>{{ item.name }}</span>
-                        <!-- Editable Qty -->
+                        <!-- Editable Quantity -->
                         <div class="qty-control">
                             <button type="button" class="qty-btn" @click="updateOrderItemQty(idx, -1)">-</button>
                             <input 
@@ -180,7 +181,7 @@
             </div>
         </div>
 
-        <!-- Tab 3: Group Summary -->
+        <!-- Tab 3: Group Summary (Preview) -->
         <div v-show="activeTab === 'summary'" class="tab-content">
              <div class="summary-table-container">
                 <div class="order-table summary-table">
@@ -237,9 +238,9 @@ const toastStore = useToastStore();
 
 const isLoading = ref(false);
 const showFriendList = ref(false);
-const activeTab = ref('settings');
+const activeTab = ref('settings'); // Controls visible tab: settings, order, or summary
 
-// --- Form State ---
+// State for the Group Creation Form
 const form = reactive({
     title: '',
     startTime: '',
@@ -247,16 +248,20 @@ const form = reactive({
     products: [
         { name: '', price: '' }
     ],
-    invitedUserIds: [] // Friends IDs
+    invitedUserIds: [] // List of IDs of friends to invite
 });
 
-// --- Initial Setup ---
+/**
+ * Helper to convert date object to local ISO string (YYYY-MM-DDTHH:mm)
+ * Required for correct display in <input type="datetime-local">
+ */
 const toLocalISOString = (date) => {
     const tzOffset = date.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(date - tzOffset)).toISOString().slice(0, 16);
     return localISOTime;
 };
 
+// Initialize form defaults (Start now, End in 2 hours)
 const now = new Date();
 form.startTime = toLocalISOString(now);
 const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
@@ -264,16 +269,17 @@ form.endTime = toLocalISOString(twoHoursLater);
 const minStartTime = toLocalISOString(new Date());
 
 
-// --- Menu Logic ---
+/**
+ * Menu Management Logic
+ */
 const addProduct = () => {
     form.products.push({ name: '', price: '' });
 };
 
 const removeProduct = (index) => {
-    // Check if this product is in my order
+    // If a product is removed from the menu, also remove it from the Creator's initial order to maintain consistency
     const prodName = form.products[index].name;
     if (prodName) {
-        // Remove from my order if present
         const orderIdx = myOrderItems.value.findIndex(i => i.name === prodName);
         if (orderIdx !== -1) {
             myOrderItems.value.splice(orderIdx, 1);
@@ -283,12 +289,14 @@ const removeProduct = (index) => {
     if (form.products.length > 1) {
         form.products.splice(index, 1);
     } else {
-        // Just clear it if it's the last one
+        // Prevent removing the last row; reset it instead
         form.products[0] = { name: '', price: '' };
     }
 };
 
-// --- Members Logic ---
+/**
+ * Member Invitation Logic
+ */
 const toggleFriend = (friendId) => {
     const index = form.invitedUserIds.indexOf(friendId);
     if (index === -1) {
@@ -304,7 +312,10 @@ const getFriendName = (id) => {
 };
 
 
-// --- My Order Logic (Local) ---
+/**
+ * My Order Logic (Local State)
+ * Allows the creator to place an initial order while creating the group.
+ */
 const myOrderItems = ref([]);
 const selectedProductIndex = ref(-1);
 const selectedQty = ref(1);
@@ -314,7 +325,7 @@ const addToMyOrder = () => {
     const prod = form.products[selectedProductIndex.value];
     if (!prod.name || !prod.price) return;
 
-    // Check if already in order
+    // Check if item already exists in order; if so, update quantity
     const existing = myOrderItems.value.find(i => i.name === prod.name);
     if (existing) {
         existing.quantity += selectedQty.value;
@@ -325,7 +336,7 @@ const addToMyOrder = () => {
             quantity: selectedQty.value
         });
     }
-    // Reset selection
+    // Reset inputs
     selectedQty.value = 1;
 };
 
@@ -346,9 +357,11 @@ const myOrderTotal = computed(() => {
 });
 
 
-// --- Group Summary Logic (Local Preview) ---
+/**
+ * Group Summary Logic
+ * Generates a preview of the group statistics based on the initial order.
+ */
 const localGroupStats = computed(() => {
-    // Since only Creator can order initially, stats are just my order items
     return myOrderItems.value.map(item => ({
         name: item.name,
         quantity: item.quantity,
@@ -357,9 +370,12 @@ const localGroupStats = computed(() => {
 });
 
 
-// --- Submission ---
+/**
+ * Form Submission
+ * Validates inputs and sends payload to backend.
+ */
 const handleSubmit = async () => {
-    // Validation
+    // 1. Basic Validation
     if (!form.title) {
         toastStore.addToast("Please enter a group name.", "error");
         activeTab.value = 'settings';
@@ -370,7 +386,7 @@ const handleSubmit = async () => {
         activeTab.value = 'settings';
         return;
     }
-    // Check valid products
+    // 2. Product Validation
     const validProducts = form.products.filter(p => p.name && p.price);
     if (validProducts.length === 0) {
         toastStore.addToast("Please add at least one valid product to the menu.", "error");
@@ -391,7 +407,7 @@ const handleSubmit = async () => {
                 price: Number(p.price)
             })),
             invitedUserIds: form.invitedUserIds,
-            // Send Initial Order if any
+            // Include initial order if present
             initialOrder: myOrderItems.value.length > 0 ? myOrderItems.value : undefined
         }, {
             headers: { Authorization: `Bearer ${token}` }
