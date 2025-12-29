@@ -29,6 +29,19 @@ const router = createRouter({
             path: '/friends',
             name: 'friends',
             component: () => import('../views/FriendsView.vue'),
+        },
+        {
+            path: '/terminal',
+            name: 'terminal',
+            component: () => import('../views/TerminalView.vue'),
+            beforeEnter: (to, from, next) => {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (user && user.username === 'OmegaAdmin') {
+                    next();
+                } else {
+                    next('/');
+                }
+            }
         }
     ],
 });
