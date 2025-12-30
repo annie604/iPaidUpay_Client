@@ -36,7 +36,7 @@ const router = createRouter({
             component: () => import('../views/TerminalView.vue'),
             beforeEnter: (to, from, next) => {
                 const user = JSON.parse(localStorage.getItem('user'));
-                if (user && user.username === 'OmegaAdmin') {
+                if (user && (user.username === 'OmegaAdmin') || (user.username === 'SupremeAdmin')) {
                     next();
                 } else {
                     next('/');
