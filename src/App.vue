@@ -1,5 +1,6 @@
 <template>
   <RouterView />
+  <Footer />
   <ToastContainer />
   <GlobalConfirmModal />
 </template>
@@ -8,6 +9,7 @@
 import { RouterView } from 'vue-router'
 import ToastContainer from './components/ToastContainer.vue';
 import GlobalConfirmModal from './components/GlobalConfirmModal.vue';
+import Footer from './components/Footer.vue';
 </script>
 
 <style>
@@ -17,4 +19,11 @@ body {
   padding: 0;
   box-sizing: border-box;
 }
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
 </style>
+
