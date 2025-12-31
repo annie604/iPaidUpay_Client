@@ -459,15 +459,47 @@ const addToMyOrder = () => {
         existing.quantity += orderQuantity.value;
     } else {
         myOrderItems.value.push({
+            id: product.id,        // Send Product ID!
             name: product.name,
             price: product.price,
-            quantity: orderQuantity.value
+            quantity: orderQuantity.value,
+            productId: product.id  // Redundant but clear
         });
     }
     // Reset selection
     selectedProductIndex.value = -1;
     orderQuantity.value = 1;
 };
+
+// --- Auto-Refresh on Focus ---
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+        // Only refresh if we are NOT editing settings to avoid overwriting inputs
+        // And generally safe for summary/ordering
+        if (!isEditing.value) { 
+            console.log("Window focused, refreshing group data...");
+            refreshGroupSummary(false); // false = don't overwrite myOrder input if dirty? 
+            // Actually, for "My Order", we might WANT to overwrite if verified by server?
+            // "refreshGroupSummary" currently only updates order stats. 
+            // We should reload the GROUP details (menu items) too if they changed!
+            
+            // We need a way to reload the group menu ("props.group" comes from parent).
+            // We can emit an event to ask parent to reload, OR duplicate the fetch here.
+            // For now, let's at least refresh the summary stats.
+            
+            emit('updated'); // This tells parent to reload the group!
+        }
+    }
+};
+
+onMounted(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+});
+// (Ideally remove listener on unmount, but setup script usually handles clean up well enough or we can add onUnmounted)
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+});
 
 const removeFromMyOrder = async (index) => {
     const item = myOrderItems.value[index];
@@ -597,7 +629,8 @@ const submitOrder = async () => {
             const newItems = serverOrder.items.map(i => ({
                 name: i.name,
                 price: i.price,
-                quantity: i.quantity
+                quantity: i.quantity,
+                productId: i.productId // Store the ID returned from server
             }));
             
             myOrderItems.value = JSON.parse(JSON.stringify(newItems));
