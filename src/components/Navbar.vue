@@ -11,7 +11,7 @@
       <div class="nav-links" :class="{ 'show': isMenuOpen }">
         <router-link to="/groups" class="nav-item" :class="{ 'active': $route.path === '/groups' || $route.path === '/' }">Groups</router-link>
         <router-link to="/friends" class="nav-item" :class="{ 'active': $route.path === '/friends' }">Friends</router-link>
-        <router-link v-if="userUsername === 'OmegaAdmin'" to="/terminal" class="nav-item" :class="{ 'active': $route.path === '/terminal' }">Terminal</router-link>
+        <router-link v-if="userUsername === 'OmegaAdmin' || userUsername === 'SupremeAdmin'" to="/terminal" class="nav-item" :class="{ 'active': $route.path === '/terminal' }">Terminal</router-link>
         <div class="user-profile">
           <span class="user-name">Hi, {{ userName }}</span>
           <a href="#" @click.prevent="logout" class="logout-btn">Logout</a>

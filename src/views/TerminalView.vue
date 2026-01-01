@@ -75,7 +75,7 @@ const executed = ref(false);
 
 onMounted(() => {
   // Security check
-  if (!authStore.user || authStore.user.username !== 'OmegaAdmin') {
+  if (!authStore.user || !['OmegaAdmin', 'SupremeAdmin'].includes(authStore.user.username)) {
     router.push('/');
     return;
   }
