@@ -1,0 +1,53 @@
+name: Deploy to EC2
+
+# 觸發條件：當 push 到 main 分支時
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch: # 允許手動觸發
+
+jobs:
+  deploy:
+    name: Deploy iPaidUpay Client to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout 代碼
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. SSH 連接到 EC2 並部署
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: |
+            # 進入專案目錄
+            cd /home/ubuntu/iPaidUpay_Client
+
+            # 拉取最新代碼
+            git pull origin master
+
+            # 使用 Docker Compose 重新建置並啟動
+            docker compose down
+            docker compose up -d --build
+
+            # 清理未使用的 Docker 資源（舊映像等）
+            docker system prune -f
+
+            # 顯示容器狀態
+            docker ps | grep ipaidupay-client
+
+      # 3. 部署成功通知
+      - name: Deployment Success
+        if: success()
+        run: echo "✅ 部署成功！iPaidUpay Client 已更新"
+
+      # 4. 部署失敗通知
+      - name: Deployment Failed
+        if: failure()
+        run: echo "❌ 部署失敗，請檢查錯誤日誌"
