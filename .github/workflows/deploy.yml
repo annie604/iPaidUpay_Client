@@ -36,6 +36,9 @@ jobs:
             docker compose down
             docker compose up -d --build
 
+            # 連接到後端網路（確保前後端可互通）
+            docker network connect ipaidupay_server_app-network ipaidupay-client || true
+
             # 清理未使用的 Docker 資源（舊映像等）
             docker system prune -f
 
