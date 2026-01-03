@@ -5,21 +5,21 @@
 
     <!-- 2. Wrap content in standard container styles -->
     <div class="sql-terminal-container">
-      <h2>SQL Command Terminal</h2>
-      
+      <h2>SQL 指令終端機</h2>
+
       <div class="terminal-window">
         <div class="terminal-header">postgres@ipaidupay: ~</div>
-        <textarea 
-          v-model="sqlQuery" 
+        <textarea
+          v-model="sqlQuery"
           placeholder="SELECT * FROM &quot;User&quot; LIMIT 10;"
           class="sql-input"
           @keydown.ctrl.enter="runQuery"
         ></textarea>
         <div class="actions">
           <button @click="runQuery" :disabled="loading" class="run-btn">
-            {{ loading ? 'Running...' : 'Execute (Ctrl+Enter)' }}
+            {{ loading ? '執行中...' : '執行（Ctrl+Enter）' }}
           </button>
-          <button @click="clear" class="clear-btn">Clear</button>
+          <button @click="clear" class="clear-btn">清除</button>
         </div>
       </div>
 
@@ -28,7 +28,7 @@
       </div>
 
       <div v-if="queryResult && queryResult.length > 0" class="result-container">
-        <div class="result-info">Rows returned: {{ queryResult.length }}</div>
+        <div class="result-info">返回資料列數：{{ queryResult.length }}</div>
         <div class="table-wrapper">
           <table>
             <thead>
@@ -50,7 +50,7 @@
       </div>
 
       <div v-else-if="executed && (!queryResult || queryResult.length === 0)" class="no-data">
-        Query executed successfully. No rows returned.
+        查詢執行成功。沒有返回資料列。
       </div>
     </div>
   </div>

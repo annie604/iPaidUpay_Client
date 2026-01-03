@@ -9,41 +9,41 @@
       <!-- Tab Navigation -->
        <div class="modal-tabs" v-if="mode === 'detail' || mode === 'summary' || mode === 'order'">
           <!-- Menu Settings: Visible if Creator, or Editing. Non-creators see 'Menu List' -->
-          <button 
-            :class="['tab-btn', { active: activeTab === 'settings' }]" 
+          <button
+            :class="['tab-btn', { active: activeTab === 'settings' }]"
             @click="activeTab = 'settings'"
             v-if="isCreator || mode === 'edit'"
           >
-            Menu Settings
+            菜單設定
           </button>
-           
-           <button 
-            :class="['tab-btn', { active: activeTab === 'settings' }]" 
+
+           <button
+            :class="['tab-btn', { active: activeTab === 'settings' }]"
             @click="activeTab = 'settings'"
             v-if="!isCreator && mode !== 'invite'"
           >
-             Menu List
+             菜單清單
           </button>
 
-          <button 
-            :class="['tab-btn', { active: activeTab === 'order' }]" 
+          <button
+            :class="['tab-btn', { active: activeTab === 'order' }]"
             @click="activeTab = 'order'"
           >
-             My Order
+             我的訂單
           </button>
 
-          <button 
-            :class="['tab-btn', { active: activeTab === 'summary' }]" 
+          <button
+            :class="['tab-btn', { active: activeTab === 'summary' }]"
             @click="activeTab = 'summary'"
           >
-             Group Summary
+             團購總覽
           </button>
 
-          <button 
-            :class="['tab-btn', { active: activeTab === 'payments' }]" 
+          <button
+            :class="['tab-btn', { active: activeTab === 'payments' }]"
             @click="activeTab = 'payments'"
           >
-             Payments
+             付款狀態
           </button>
        </div>
       
@@ -53,10 +53,10 @@
         <div v-show="activeTab === 'settings'" class="tab-content">
              <form @submit.prevent="handleSubmit">
                 <div class="form-group">
-                    <label>Group Name:</label>
-                    <input 
-                    v-model="form.title" 
-                    type="text" 
+                    <label>團購名稱：</label>
+                    <input
+                    v-model="form.title"
+                    type="text"
                     required
                     class="input-field"
                     :disabled="!canEditSettings"
@@ -65,30 +65,30 @@
 
                 <div class="form-group">
                     <div class="time-label-row">
-                        <label>Time:</label>
+                        <label>時間：</label>
                         <!-- Status Toggle (Open/Closed) -->
                         <div class="status-control" v-if="mode !== 'create'">
                             <!-- Interactive Toggle for Creator -->
-                             <button 
-                                v-if="isCreator" 
-                                type="button" 
+                             <button
+                                v-if="isCreator"
+                                type="button"
                                 class="status-toggle-pill-dashboard"
                                 :class="{ 'open': localStatus === 'OPEN', 'closed': localStatus === 'CLOSED' }"
                                 @click="toggleGroupStatus"
                                 :disabled="isStatusUpdating"
-                                title="Click to toggle status"
+                                title="點擊切換狀態"
                             >
-                                {{ localStatus === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                                {{ localStatus === 'OPEN' ? '開放' : '關閉' }}
                             </button>
 
                             <!-- Read-only Badge for Members -->
-                            <span 
+                            <span
                                 v-else
-                                class="status-toggle-pill-dashboard" 
+                                class="status-toggle-pill-dashboard"
                                 :class="{ 'open': localStatus === 'OPEN', 'closed': localStatus === 'CLOSED' }"
                                 style="cursor: default;"
                             >
-                                {{ localStatus === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                                {{ localStatus === 'OPEN' ? '開放' : '關閉' }}
                             </span>
                         </div>
                     </div>
@@ -101,21 +101,21 @@
                             :disabled="!canEditSettings"
                             @click="showPicker"
                         />
-                        <span>to</span>
-                        <input 
-                            v-model="form.endTime" 
-                            type="datetime-local" 
-                            required 
+                        <span>至</span>
+                        <input
+                            v-model="form.endTime"
+                            type="datetime-local"
+                            required
                             class="input-field date-input"
                             :disabled="!canEditSettings"
                             @click="showPicker"
                         />
                     </div>
                 </div>
-                
+
                 <!-- Members Management Section -->
                 <div class="form-group members-section" ref="membersSection">
-                    <label>Members:</label>
+                    <label>成員：</label>
                     <div class="members-container">
                         <div v-for="userId in form.invitedUserIds" :key="userId" class="member-chip">
                             <span class="member-name" :class="{ 'creator-name': group.creatorId && userId === group.creatorId }">
@@ -126,7 +126,7 @@
                         </div>
 
                         <button v-if="canEditSettings" type="button" class="invite-btn" @click="showFriendList = !showFriendList">
-                            Invite +
+                            邀請 +
                         </button>
                     </div>
 
@@ -135,7 +135,7 @@
 
                     <div v-if="showFriendList" class="friend-selection-list">
                         <div v-if="userStore.friends.length === 0" class="no-friends-msg">
-                            No friends to invite.
+                            沒有可邀請的好友。
                         </div>
                         <div 
                             v-for="friend in userStore.friends" 
@@ -153,37 +153,37 @@
                 
                 <!-- Menu Items Section -->
                 <div class="menu-section">
-                    <label>Menu (Items & Prices)</label>
+                    <label>菜單（品項與價格）</label>
                     <div class="menu-table">
                         <div class="table-header">
-                            <span>Item Name</span>
-                            <span>Price</span>
-                            <span v-if="isEditing">Action</span>
+                            <span>品項名稱</span>
+                            <span>價格</span>
+                            <span v-if="isEditing">操作</span>
                         </div>
                         <div v-for="(item, index) in form.products" :key="index" class="table-row">
-                            <input v-model="item.name" type="text" placeholder="Item" required class="input-field small" :disabled="!canEditSettings" />
-                            <input v-model.number="item.price" type="number" placeholder="$" required class="input-field small" :disabled="!canEditSettings" />
-                            <button 
-                                v-if="canEditSettings" 
-                                type="button" 
-                                @click="removeProduct(index)" 
+                            <input v-model="item.name" type="text" placeholder="品項" required class="input-field small" :disabled="!canEditSettings" />
+                            <input v-model.number="item.price" type="number" min="0" step="1" placeholder="$" required class="input-field small" :disabled="!canEditSettings" />
+                            <button
+                                v-if="canEditSettings"
+                                type="button"
+                                @click="removeProduct(index)"
                                 class="remove-btn"
                                 :disabled="isProductInUse(item.name)"
-                                :title="isProductInUse(item.name) ? 'Cannot delete: Item is currently ordered by a member' : 'Remove Item'"
+                                :title="isProductInUse(item.name) ? '無法刪除：此品項已有成員訂購' : '移除品項'"
                             >
                                 &times;
                             </button>
                         </div>
                     </div>
-                    <button v-if="canEditSettings" type="button" @click="addProduct" class="add-btn">+ Add Item</button>
+                    <button v-if="canEditSettings" type="button" @click="addProduct" class="add-btn">+ 新增品項</button>
                 </div>
 
                 <div class="form-actions" v-if="canEditSettings">
                     <button type="submit" class="submit-btn" :disabled="isLoading">
-                        {{ 
-                            isLoading ? 'Saving...' : 
-                            isSettingsSaved ? 'Saved!' :
-                            isSettingsDirty ? 'Save Changes' : 'Up to date'
+                        {{
+                            isLoading ? '儲存中...' :
+                            isSettingsSaved ? '已儲存！' :
+                            isSettingsDirty ? '儲存變更' : '已是最新'
                         }}
                     </button>
                 </div>
@@ -193,28 +193,28 @@
         <!-- Tab 2: My Order (Individual Member Order) -->
         <div v-show="activeTab === 'order'" class="tab-content">
             <div class="order-selection-area">
-                <label>Add Item:</label>
+                <label>新增項目：</label>
                 <div class="selection-row">
                     <select v-model="selectedProductIndex" class="input-field" :disabled="isOrderLocked">
-                        <option :value="-1" disabled>Select Item...</option>
+                        <option :value="-1" disabled>選擇品項...</option>
                         <option v-for="(prod, idx) in form.products" :key="idx" :value="idx">
                             {{ prod.name }} (${{ prod.price }})
                         </option>
                     </select>
-                    <input v-model.number="orderQuantity" type="number" min="1" class="input-field qty-input" placeholder="Qty" :disabled="isOrderLocked" />
-                    <button type="button" class="add-order-btn" @click="addToMyOrder" :disabled="selectedProductIndex === -1 || isOrderLocked">Add</button>
+                    <input v-model.number="orderQuantity" type="number" min="1" class="input-field qty-input" placeholder="數量" :disabled="isOrderLocked" />
+                    <button type="button" class="add-order-btn" @click="addToMyOrder" :disabled="selectedProductIndex === -1 || isOrderLocked">新增</button>
                 </div>
             </div>
 
             <div class="my-order-list">
                 <div class="order-table">
                      <div class="table-header">
-                        <span>Item</span>
-                        <span>Qty</span>
-                        <span>Subtotal</span>
-                        <span>Action</span>
+                        <span>品項</span>
+                        <span>數量</span>
+                        <span>小計</span>
+                        <span>操作</span>
                     </div>
-                    <div v-if="myOrderItems.length === 0" class="empty-msg">No items selected yet.</div>
+                    <div v-if="myOrderItems.length === 0" class="empty-msg">尚未選擇品項。</div>
                     <div v-for="(item, idx) in myOrderItems" :key="idx" class="table-row">
                         <span>{{ item.name }}</span>
                         <!-- Quantity Control (- 1 +) -->
@@ -234,20 +234,20 @@
                     </div>
                 </div>
                 <div class="order-total">
-                    Total: <span class="price">${{ myOrderTotal }}</span>
+                    總計： <span class="price">${{ myOrderTotal }}</span>
                 </div>
             </div>
 
             <div class="form-actions">
                 <div class="last-updated" v-if="formattedLastUpdated">
-                    Last updated: <br>
+                    最後更新： <br>
                     {{ formattedLastUpdated }}
                 </div>
                 <button type="button" class="submit-btn" :disabled="isOrderLoading || isOrderLocked" @click="submitOrder">
-                    {{ 
-                        isOrderLoading ? 'Saving...' : 
-                        isSaved ? 'Saved!' :
-                        isDirty ? 'Save Order' : 'Up to date'
+                    {{
+                        isOrderLoading ? '儲存中...' :
+                        isSaved ? '已儲存！' :
+                        isDirty ? '儲存訂單' : '已是最新'
                     }}
                 </button>
             </div>
@@ -258,10 +258,10 @@
              <div class="summary-table-container">
                 <div class="order-table summary-table">
                     <div class="table-header">
-                        <span>Item</span>
-                        <span>Total Qty</span>
-                        <span>Total Amount</span>
-                        <span>Ordered By</span>
+                        <span>品項</span>
+                        <span>總數量</span>
+                        <span>總金額</span>
+                        <span>訂購者</span>
                     </div>
                     <div v-for="(stat, idx) in detailedGroupStats" :key="idx" class="table-row summary-row">
                         <span>{{ stat.name }}</span>
@@ -273,7 +273,7 @@
                     </div>
                 </div>
                  <div class="grand-total">
-                    Grand Total: <span class="price">${{ grandTotal }}</span>
+                    總計： <span class="price">${{ grandTotal }}</span>
                 </div>
              </div>
         </div>
@@ -283,33 +283,33 @@
              <div class="summary-table-container">
                 <div class="order-table summary-table" style="grid-template-columns: 1fr 1fr 1fr !important;">
                     <div class="table-header" style="grid-template-columns: 1fr 1fr 1fr !important;">
-                        <span>Member</span>
-                        <span>Balance</span>
-                        <span>Status</span>
+                        <span>成員</span>
+                        <span>金額</span>
+                        <span>狀態</span>
                     </div>
                     <div v-if="allOrders.length === 0" class="empty-msg">
-                        No orders found.
+                        查無訂單。
                     </div>
                     <div v-else v-for="(order, idx) in allOrders" :key="idx" class="table-row" style="grid-template-columns: 1fr 1fr 1fr !important;">
                         <span>
-                            {{ order.user ? order.user.name : (order.userId === userStore.user?.id ? 'Me' : `User ${order.userId}`) }}
-                            <span v-if="order.userId === group.creatorId" class="creator-tag">(Host)</span>
+                            {{ order.user ? order.user.name : (order.userId === userStore.user?.id ? '我' : `用戶 ${order.userId}`) }}
+                            <span v-if="order.userId === group.creatorId" class="creator-tag">（主揪）</span>
                         </span>
                         <span>${{ order.total || 0 }}</span>
                         <span>
-                             <button 
-                                class="status-btn" 
+                             <button
+                                class="status-btn"
                                 :class="{ 'paid': order.paymentStatus === 'PAID', 'unpaid': order.paymentStatus === 'UNPAID' }"
                                 @click="togglePaymentStatus(order)"
                                 :disabled="!isCreator || isStatusUpdating"
                              >
-                                {{ order.paymentStatus || 'UNPAID' }}
+                                {{ order.paymentStatus === 'PAID' ? '已付款' : '未付款' }}
                              </button>
                         </span>
                     </div>
                 </div>
                  <div class="grand-total">
-                    Total Collected: <span class="price">${{ totalCollected }}</span> / ${{ grandTotal }}
+                    已收金額： <span class="price">${{ totalCollected }}</span> / ${{ grandTotal }}
                 </div>
              </div>
         </div>
@@ -318,7 +318,7 @@
     </div>
     
     <!-- Loading overlay for background data fetch -->
-    <div v-if="isLoadingSummary" class="loading-overlay">Loading details...</div>
+    <div v-if="isLoadingSummary" class="loading-overlay">載入詳細資料中...</div>
   </div>
 </template>
 
@@ -504,8 +504,8 @@ onUnmounted(() => {
 const removeFromMyOrder = async (index) => {
     const item = myOrderItems.value[index];
     const confirmed = await toastStore.showConfirm(
-        "Remove Item", 
-        `Are you sure you want to remove "${item.name}"?`
+        "移除品項",
+        `確定要移除「${item.name}」嗎？`
     );
 
     if (confirmed) {
@@ -523,8 +523,8 @@ const decreaseQty = async (index) => {
     } else {
         // Prompt for removal if decreasing to 0
         const confirmed = await toastStore.showConfirm(
-            "Remove Item", 
-            "Quantity is 0. Do you want to remove this item?"
+            "移除品項",
+            "數量為 0。確定要移除此品項嗎？"
         );
         if (confirmed) {
             myOrderItems.value.splice(index, 1);
@@ -536,8 +536,8 @@ const handleQtyChange = async (index) => {
     const qty = myOrderItems.value[index].quantity;
     if (qty <= 0) {
         const confirmed = await toastStore.showConfirm(
-            "Remove Item", 
-            "Quantity is 0. Do you want to remove this item?"
+            "移除品項",
+            "數量為 0。確定要移除此品項嗎？"
         );
         if (confirmed) {
              myOrderItems.value.splice(index, 1);
@@ -647,7 +647,7 @@ const submitOrder = async () => {
 
     } catch (error) {
         console.error("Order submit failed", error);
-        toastStore.addToast("Failed to update order. Please try again.", "error");
+        toastStore.addToast("更新訂單失敗。請再試一次。", "error");
     } finally {
         isOrderLoading.value = false;
     }
@@ -670,14 +670,14 @@ const toggleGroupStatus = async () => {
     // Toggle Status
     const oldStatus = localStatus.value;
     const newStatus = oldStatus === 'OPEN' ? 'CLOSED' : 'OPEN';
-    
-    // Confirmation
-    const action = newStatus === 'CLOSED' ? 'CLOSE' : 'OPEN';
-    const message = newStatus === 'CLOSED' 
-        ? "Are you sure you want to CLOSE this group?"
-        : "Are you sure you want to OPEN this group?";
 
-    const confirmed = await toastStore.showConfirm(`${action} Group`, message);
+    // Confirmation
+    const action = newStatus === 'CLOSED' ? '關閉' : '開放';
+    const message = newStatus === 'CLOSED'
+        ? "確定要關閉這個團購嗎？"
+        : "確定要開放這個團購嗎？";
+
+    const confirmed = await toastStore.showConfirm(`${action}團購`, message);
     if (!confirmed) return;
 
     isStatusUpdating.value = true;
@@ -691,12 +691,12 @@ const toggleGroupStatus = async () => {
              headers: { Authorization: `Bearer ${authStore.token}` }
         });
 
-        toastStore.addToast(`Group is now ${newStatus}`, 'success');
+        toastStore.addToast(`團購狀態已變更為${newStatus === 'OPEN' ? '開放' : '關閉'}`, 'success');
         emit('updated');
 
     } catch (error) {
         console.error("Failed to update status", error);
-        toastStore.addToast("Failed to update status", 'error');
+        toastStore.addToast("更新狀態失敗", 'error');
         // Revert on failure
         localStatus.value = oldStatus; 
     } finally {
@@ -728,23 +728,23 @@ const addProduct = () => {
 const removeProduct = async (index) => {
     const product = form.products[index];
     if (isProductInUse(product.name)) {
-        toastStore.addToast(`Cannot delete "${product.name}" because it is currently included in an order.`, 'error');
+        toastStore.addToast(`無法刪除「${product.name}」，因為已有成員訂購此品項。`, 'error');
         return;
     }
     if (form.products.length <= 1) {
-        toastStore.addToast("Cannot delete the last item.", 'warning');
+        toastStore.addToast("無法刪除最後一個品項。", 'warning');
         return;
     }
 
     const confirmed = await toastStore.showConfirm(
-        "Delete Item", 
-        `Are you sure you want to delete "${product.name || 'this item'}"?`
+        "刪除品項",
+        `確定要刪除「${product.name || '此品項'}」嗎？`
     );
 
     if (confirmed) {
         form.products.splice(index, 1);
-        await handleSubmit(); 
-        toastStore.addToast("Item deleted successfully", "success");
+        await handleSubmit();
+        toastStore.addToast("品項已成功刪除", "success");
     }
 };
 
@@ -780,7 +780,14 @@ const getFriendName = (id) => {
 // --- Submission ---
 const handleSubmit = async () => {
     if (!isSettingsDirty.value) return;
-    
+
+    // 驗證價格不能為負數
+    const hasInvalidPrice = form.products.some(p => p.price < 0);
+    if (hasInvalidPrice) {
+        toastStore.addToast("價格不能為負數", "error");
+        return;
+    }
+
     isLoading.value = true;
     isSettingsSaved.value = false;
     try {
@@ -790,7 +797,7 @@ const handleSubmit = async () => {
             startTime: new Date(form.startTime).toISOString(),
             endTime: new Date(form.endTime).toISOString(),
             products: form.products.map(p => ({
-                id: p.id, 
+                id: p.id,
                 name: p.name,
                 price: Number(p.price)
             })),
@@ -813,7 +820,7 @@ const handleSubmit = async () => {
         
     } catch (error) {
         console.error("Failed to update group", error);
-        toastStore.addToast("Failed to update group.", "error");
+        toastStore.addToast("更新團購失敗。", "error");
     } finally {
         isLoading.value = false;
     }
@@ -889,14 +896,14 @@ const togglePaymentStatus = async (order) => {
         order.paymentStatus = newStatus;
 
         if (newStatus === 'PAID') {
-            toastStore.addToast("Payment marked as PAID", "success");
+            toastStore.addToast("付款狀態已標記為已付款", "success");
         } else {
-            toastStore.addToast("Payment marked as UNPAID", "info");
+            toastStore.addToast("付款狀態已標記為未付款", "info");
         }
 
     } catch (err) {
         console.error("Failed to toggle payment status", err);
-        const errorMsg = err.response?.data?.error || "Failed to update payment status";
+        const errorMsg = err.response?.data?.error || "更新付款狀態失敗";
         toastStore.addToast(errorMsg, "error");
     } finally {
         isStatusUpdating.value = false;

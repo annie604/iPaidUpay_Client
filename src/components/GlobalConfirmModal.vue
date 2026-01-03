@@ -1,12 +1,12 @@
 <template>
   <div v-if="toastStore.confirmState.visible" class="modal-overlay">
     <div class="confirm-card">
-      <h3>{{ toastStore.confirmState.title || 'Confirm' }}</h3>
+      <h3>{{ toastStore.confirmState.title || '確認' }}</h3>
       <p>{{ toastStore.confirmState.message }}</p>
-      
+
       <div class="actions">
-        <button class="btn cancel" @click="toastStore.handleConfirm(false)">Cancel</button>
-        <button class="btn confirm" @click="toastStore.handleConfirm(true)">Confirm</button>
+        <button class="btn cancel" @click="toastStore.handleConfirm(false)">取消</button>
+        <button class="btn confirm" @click="toastStore.handleConfirm(true)">確認</button>
       </div>
     </div>
   </div>

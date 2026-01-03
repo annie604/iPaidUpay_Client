@@ -2,29 +2,29 @@
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Create Group</h2>
+        <h2>發起團購</h2>
         <button class="close-btn" @click="$emit('close')">&times;</button>
       </div>
 
       <!-- Tab Navigation -->
       <div class="modal-tabs">
-        <button 
-          :class="['tab-btn', { active: activeTab === 'settings' }]" 
+        <button
+          :class="['tab-btn', { active: activeTab === 'settings' }]"
           @click="activeTab = 'settings'"
         >
-          Menu Settings
+          菜單設定
         </button>
-        <button 
-          :class="['tab-btn', { active: activeTab === 'order' }]" 
+        <button
+          :class="['tab-btn', { active: activeTab === 'order' }]"
           @click="activeTab = 'order'"
         >
-          My Order
+          我的訂單
         </button>
-        <button 
-          :class="['tab-btn', { active: activeTab === 'summary' }]" 
+        <button
+          :class="['tab-btn', { active: activeTab === 'summary' }]"
           @click="activeTab = 'summary'"
         >
-          Group Summary
+          團購總覽
         </button>
       </div>
       
@@ -34,45 +34,45 @@
         <div v-show="activeTab === 'settings'" class="tab-content">
             <form id="create-group-form" @submit.prevent="handleSubmit">
                 <div class="form-group">
-                    <label>Group Name:</label>
-                    <input 
-                    v-model="form.title" 
-                    type="text" 
-                    placeholder="Enter group name (e.g. KFC)" 
+                    <label>團購名稱：</label>
+                    <input
+                    v-model="form.title"
+                    type="text"
+                    placeholder="輸入團購名稱（例如：KFC）"
                     required
                     class="input-field"
                     />
                 </div>
 
                 <div class="form-group">
-                    <label>Time:</label>
+                    <label>時間：</label>
                     <div class="time-inputs">
-                        <input 
-                            v-model="form.startTime" 
-                            type="datetime-local" 
-                            :min="minStartTime" 
-                            required 
+                        <input
+                            v-model="form.startTime"
+                            type="datetime-local"
+                            :min="minStartTime"
+                            required
                             class="input-field date-input"
                             @click="showPicker"
                         />
-                        <span>to</span>
-                        <input 
-                            v-model="form.endTime" 
-                            type="datetime-local" 
-                            :min="form.startTime" 
-                            required 
+                        <span>至</span>
+                        <input
+                            v-model="form.endTime"
+                            type="datetime-local"
+                            :min="form.startTime"
+                            required
                             class="input-field date-input"
                             @click="showPicker"
                         />
                     </div>
                 </div>
-                
+
                 <div class="form-group members-section">
-                    <label>Members:</label>
+                    <label>成員：</label>
                     <div class="members-container">
                         <!-- Creator is always added by default -->
                         <div class="member-chip">
-                             <span class="member-name creator-name">{{ userStore.user?.name }} (Host)</span>
+                             <span class="member-name creator-name">{{ userStore.user?.name }}（主揪）</span>
                         </div>
 
                         <!-- Invited Friends List -->
@@ -83,7 +83,7 @@
 
                         <!-- Add Member Trigger -->
                         <button type="button" class="invite-btn" @click="showFriendList = !showFriendList">
-                            Invite +
+                            邀請 +
                         </button>
                     </div>
 
@@ -92,7 +92,7 @@
 
                     <div v-if="showFriendList" class="friend-selection-list">
                         <div v-if="userStore.friends.length === 0" class="no-friends-msg">
-                            You have no friends yet. <router-link to="/friends">Add friends</router-link> first.
+                            您還沒有好友。請先<router-link to="/friends">新增好友</router-link>。
                         </div>
                         <div 
                             v-for="friend in userStore.friends" 
@@ -109,20 +109,20 @@
                 </div>
                 
                 <div class="menu-section">
-                    <label>Menu (Items & Prices)</label>
+                    <label>菜單（品項與價格）</label>
                     <div class="menu-table">
                         <div class="table-header">
-                            <span>Item Name</span>
-                            <span>Price</span>
-                            <span>Action</span>
+                            <span>品項名稱</span>
+                            <span>價格</span>
+                            <span>操作</span>
                         </div>
                         <div v-for="(item, index) in form.products" :key="index" class="table-row">
-                            <input v-model="item.name" type="text" placeholder="Item" required class="input-field small" />
-                            <input v-model.number="item.price" type="number" placeholder="$" required class="input-field small" />
+                            <input v-model="item.name" type="text" placeholder="品項" required class="input-field small" />
+                            <input v-model.number="item.price" type="number" min="0" step="1" placeholder="$" required class="input-field small" />
                             <button type="button" @click="removeProduct(index)" class="remove-btn">&times;</button>
                         </div>
                     </div>
-                    <button type="button" @click="addProduct" class="add-btn">+ Add Item</button>
+                    <button type="button" @click="addProduct" class="add-btn">+ 新增品項</button>
                 </div>
             </form>
         </div>
@@ -130,34 +130,34 @@
         <!-- Tab 2: My Order (Creator's Initial Order) -->
         <div v-show="activeTab === 'order'" class="tab-content">
              <div class="order-selection-area">
-                <label>Add Item:</label>
+                <label>新增項目：</label>
                 <div class="selection-row">
                     <select v-model="selectedProductIndex" class="input-field">
-                        <option :value="-1" disabled>Select Item...</option>
-                        <option 
-                            v-for="(prod, idx) in form.products" 
-                            :key="idx" 
+                        <option :value="-1" disabled>選擇品項...</option>
+                        <option
+                            v-for="(prod, idx) in form.products"
+                            :key="idx"
                             :value="idx"
                         >
-                            {{ prod.name ? prod.name : '(Unnamed Item)' }} (${{ prod.price }})
+                            {{ prod.name ? prod.name : '（未命名品項）' }} (${{ prod.price }})
                         </option>
                     </select>
-                    <input v-model.number="selectedQty" type="number" min="1" class="input-field qty-input" placeholder="Qty" />
-                    <button type="button" class="add-order-btn" @click="addToMyOrder" :disabled="selectedProductIndex === -1">Add</button>
+                    <input v-model.number="selectedQty" type="number" min="1" class="input-field qty-input" placeholder="數量" />
+                    <button type="button" class="add-order-btn" @click="addToMyOrder" :disabled="selectedProductIndex === -1">新增</button>
                 </div>
             </div>
 
             <div class="my-order-list">
-                <h4>My Order List</h4>
+                <h4>我的訂單清單</h4>
                  <div v-if="myOrderItems.length === 0" class="empty-msg">
-                    You haven't added any items yet.
+                    您尚未新增任何項目。
                 </div>
                 <div v-else class="order-table">
                      <div class="table-header">
-                        <span>Item</span>
-                        <span>Qty</span>
-                        <span>Subtotal</span>
-                        <span>Action</span>
+                        <span>品項</span>
+                        <span>數量</span>
+                        <span>小計</span>
+                        <span>操作</span>
                     </div>
                     <div v-for="(item, idx) in myOrderItems" :key="idx" class="table-row">
                         <span>{{ item.name }}</span>
@@ -176,7 +176,7 @@
                     </div>
                 </div>
                 <div class="order-total" v-if="myOrderItems.length > 0">
-                    Total: <span class="price">${{ myOrderTotal }}</span>
+                    總計： <span class="price">${{ myOrderTotal }}</span>
                 </div>
             </div>
         </div>
@@ -186,28 +186,28 @@
              <div class="summary-table-container">
                 <div class="order-table summary-table">
                     <div class="table-header">
-                        <span>Item</span>
-                        <span>Total Qty</span>
-                        <span>Total Amount</span>
-                        <span>Ordered By</span>
+                        <span>品項</span>
+                        <span>總數量</span>
+                        <span>總金額</span>
+                        <span>訂購者</span>
                     </div>
                     <div v-if="localGroupStats.length === 0" class="empty-msg">
-                        No orders placed yet.
+                        尚無訂單。
                     </div>
                     <div v-else v-for="(stat, idx) in localGroupStats" :key="idx" class="table-row">
                         <span>{{ stat.name }}</span>
                         <span>{{ stat.quantity }}</span>
                         <span>${{ stat.totalPrice }}</span>
                         <span class="ordered-by">
-                             {{ userStore.user?.name }} (Host) x{{ stat.quantity }}
+                             {{ userStore.user?.name }}（主揪）x{{ stat.quantity }}
                         </span>
                     </div>
                 </div>
                  <div class="grand-total">
-                    Grand Total: <span class="price">${{ myOrderTotal }}</span>
+                    總計： <span class="price">${{ myOrderTotal }}</span>
                 </div>
              </div>
-             <p class="summary-note">Note: This is a preview based on your initial order.</p>
+             <p class="summary-note">註：此為基於您初始訂單的預覽。</p>
         </div>
 
       </div>
@@ -215,7 +215,7 @@
       <!-- Footer Actions (Always visible) -->
       <div class="modal-footer">
           <button type="button" class="submit-btn" :disabled="isLoading" @click="handleSubmit">
-             {{ isLoading ? 'Creating Group...' : 'Create Group' }}
+             {{ isLoading ? '建立中...' : '發起團購' }}
           </button>
       </div>
 
@@ -377,23 +377,29 @@ const localGroupStats = computed(() => {
 const handleSubmit = async () => {
     // 1. Basic Validation
     if (!form.title) {
-        toastStore.addToast("Please enter a group name.", "error");
+        toastStore.addToast("請輸入團購名稱。", "error");
         activeTab.value = 'settings';
         return;
     }
     if (new Date(form.endTime) <= new Date(form.startTime)) {
-        toastStore.addToast("End time must be later than Start time.", "error");
+        toastStore.addToast("結束時間必須晚於開始時間。", "error");
         activeTab.value = 'settings';
         return;
     }
     // 2. Product Validation
     const validProducts = form.products.filter(p => p.name && p.price);
     if (validProducts.length === 0) {
-        toastStore.addToast("Please add at least one valid product to the menu.", "error");
+        toastStore.addToast("請至少新增一個有效的品項到菜單。", "error");
         activeTab.value = 'settings';
         return;
     }
-
+    // 3. Price Validation
+    const hasInvalidPrice = validProducts.some(p => p.price < 0);
+    if (hasInvalidPrice) {
+        toastStore.addToast("價格不能為負數。", "error");
+        activeTab.value = 'settings';
+        return;
+    }
 
     isLoading.value = true;
     try {
@@ -412,13 +418,13 @@ const handleSubmit = async () => {
         }, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         emit('created');
         emit('close');
-        toastStore.addToast("Group created successfully!", "success");
+        toastStore.addToast("團購建立成功！", "success");
     } catch (error) {
         console.error("Failed to create group", error);
-        const errorMsg = error.response?.data?.details || "Failed to create group. Please check inputs.";
+        const errorMsg = error.response?.data?.details || "建立團購失敗。請檢查輸入。";
         toastStore.addToast(errorMsg, "error");
     } finally {
         isLoading.value = false;

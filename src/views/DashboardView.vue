@@ -5,36 +5,36 @@
     <div class="dashboard-container">
       <div class="action-card">
         <button class="create-btn" @click="openCreateModal">
-          <span class="plus-icon">+</span> 發起新團購 (Create Group)
+          <span class="plus-icon">+</span> 發起新團購
         </button>
       </div>
 
-      <CreateGroupModal 
-        v-if="isCreateModalOpen" 
-        @close="isCreateModalOpen = false" 
+      <CreateGroupModal
+        v-if="isCreateModalOpen"
+        @close="isCreateModalOpen = false"
         @created="handleGroupCreated"
       />
 
-      <div v-if="loading" class="loading-state">Loading groups...</div>
-      <div v-else-if="error" class="error-state">{{ error }}</div>
+      <div v-if="loading" class="loading-state">載入團購中...</div>
+      <div v-else-if="error" class="error-state">載入團購失敗。</div>
 
       <div v-else class="group-list">
         <div v-for="group in groups" :key="group.id" class="group-card">
-          
+
           <div class="card-header">
             <h3 class="group-title">{{ group.title }}</h3>
-            
+
             <div class="menu-container">
               <button class="menu-dots" @click="toggleMenu(group.id)">⋮</button>
-              
+
               <div v-if="activeMenuId === group.id" class="dropdown-menu">
-                  <div class="menu-item" @click="openModal(group, 'detail')">View Detail</div>
-                  <div 
-                    class="menu-item delete" 
+                  <div class="menu-item" @click="openModal(group, 'detail')">查看詳情</div>
+                  <div
+                    class="menu-item delete"
                     :class="{ 'disabled': !group.isCreator }"
                     @click="group.isCreator ? deleteGroup(group.id) : null"
                   >
-                    Delete
+                    刪除
                   </div>
               </div>
             </div>
@@ -42,53 +42,54 @@
 
           <div class="card-body" @click="openModal(group, 'detail')">
             <div class="info-row time-row">
-              <span class="label">Time:</span>
+              <span class="label">時間：</span>
               <div class="time-content">
                   <span class="value">{{ group.timeRange }}</span>
                   
                   <!-- Dashboard Status Toggle -->
-                   <button 
-                      v-if="group.isCreator" 
-                      type="button" 
+                   <button
+                      v-if="group.isCreator"
+                      type="button"
                       class="status-toggle-pill-dashboard"
                       :class="{ 'open': group.status === 'OPEN', 'closed': group.status === 'CLOSED' }"
                       @click.stop="toggleGroupStatus(group)"
-                      title="Click to toggle status"
+                      title="點擊切換狀態"
                   >
-                      {{ group.status === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                      {{ group.status === 'OPEN' ? '開放' : '關閉' }}
                   </button>
-                  <span 
+                  <span
                       v-else
-                      class="status-toggle-pill-dashboard" 
+                      class="status-toggle-pill-dashboard"
                       :class="{ 'open': group.status === 'OPEN', 'closed': group.status === 'CLOSED' }"
                       style="cursor: default;"
                   >
-                      {{ group.status === 'OPEN' ? 'OPEN' : 'CLOSED' }}
+                      {{ group.status === 'OPEN' ? '開放' : '關閉' }}
                   </span>
               </div>
             </div>
             <div class="info-row">
-              <span class="label">Creator:</span>
+              <span class="label">主揪：</span>
               <span class="value highlight">{{ group.creator }}</span>
             </div>
             <div class="info-row">
-              <span class="label">With:</span>
+              <span class="label">參加者：</span>
               <span class="value">{{ group.participants.join(', ') }}</span>
             </div>
             <div class="order-summary" @click.stop="openModal(group, 'order')">
-              <p>{{ group.itemsSummary }}</p>
-              <span class="more-link">more...</span>
+              <p v-if="group.myOrder && group.myOrder.itemsSummary">{{ group.myOrder.itemsSummary }}</p>
+              <p v-else class="no-order-hint">您還沒有訂購任何項目</p>
+              <span class="more-link">查看更多...</span>
             </div>
 
             <div class="info-row price-row" @click.stop="openModal(group, 'summary')">
-              <span class="label">Total Price:</span>
+              <span class="label">總金額：</span>
               <span class="price-tag">${{ group.price }}</span>
             </div>
           </div>
         </div>
-        
+
         <div v-if="groups.length === 0" class="empty-state">
-           No groups found. Create one!
+           找不到團購。建立一個吧！
         </div>
       </div>
       
@@ -121,7 +122,7 @@ const authStore = useAuthStore();
 const router = useRouter();
 const groups = ref([]);
 const loading = ref(true);
-const error = ref(null);
+const error = ref(false);
 const activeMenuId = ref(null);
 
 // Modal state
@@ -187,21 +188,21 @@ const handleGroupUpdated = async () => {
 
 const deleteGroup = async (groupId) => {
     const confirmed = await toastStore.showConfirm(
-        "Delete Group", 
-        "Are you sure you want to delete this group? This will permanently remove all data from the database."
+        "刪除團購",
+        "確定要刪除這個團購嗎？此操作將永久移除資料庫中的所有資料。"
     );
     if (!confirmed) return;
-    
+
     try {
         const token = authStore.token;
         await axios.delete(`/api/groups/${groupId}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        toastStore.addToast("Group deleted successfully", "success");
+        toastStore.addToast("團購已成功刪除", "success");
         fetchGroups();
     } catch (err) {
         console.error("Failed to delete group", err);
-        const errorMsg = err.response?.data?.error || "Failed to delete group.";
+        const errorMsg = err.response?.data?.error || "刪除團購失敗。";
         toastStore.addToast(errorMsg, "error");
     }
     activeMenuId.value = null;
@@ -214,12 +215,12 @@ const toggleGroupStatus = async (group) => {
     
     // Quick confirm for Closing (optional, but good for consistency)
     // Confirm Change
-    const action = newStatus === 'CLOSED' ? 'CLOSE' : 'OPEN';
-    const message = newStatus === 'CLOSED' 
-        ? `Are you sure you want to CLOSE "${group.title}"?`
-        : `Are you sure you want to OPEN "${group.title}"?`;
+    const action = newStatus === 'CLOSED' ? '關閉' : '開放';
+    const message = newStatus === 'CLOSED'
+        ? `確定要關閉「${group.title}」嗎？`
+        : `確定要開放「${group.title}」嗎？`;
 
-    const confirmed = await toastStore.showConfirm(`${action} Group`, message);
+    const confirmed = await toastStore.showConfirm(`${action}團購`, message);
     if (!confirmed) return;
 
     try {
@@ -234,15 +235,15 @@ const toggleGroupStatus = async (group) => {
              headers: { Authorization: `Bearer ${token}` }
         });
 
-        toastStore.addToast(`Group is now ${newStatus}`, 'success');
-        
+        toastStore.addToast(`團購狀態已變更為${newStatus === 'OPEN' ? '開放' : '關閉'}`, 'success');
+
         // No need to fetchGroups if we trust the update, but to be safe/sync:
-        // fetchGroups(); 
+        // fetchGroups();
     } catch (error) {
         console.error("Failed to update status", error);
         // Revert on error
-        group.status = group.status === 'OPEN' ? 'CLOSED' : 'OPEN'; 
-        toastStore.addToast("Failed to update status", 'error');
+        group.status = group.status === 'OPEN' ? 'CLOSED' : 'OPEN';
+        toastStore.addToast("更新狀態失敗", 'error');
     }
 };
 
@@ -279,8 +280,7 @@ const fetchGroups = async () => {
             // Filter out creator from participants list for display
             participants: (g.participants || []).filter(p => p !== g.creator.name),
             price: g.totalGroupAmount,
-            itemsSummary: (g.myOrder && g.myOrder.itemsSummary) ? g.myOrder.itemsSummary : 'You haven\'t ordered yet',
-            myOrder: g.myOrder, // Pass full myOrder object to modal
+            myOrder: g.myOrder, // Pass full myOrder object to modal (used in HTML v-if)
             orderStats: g.orderStats || [],
             products: g.products || []
         }));
@@ -292,7 +292,7 @@ const fetchGroups = async () => {
             router.push('/login');
             return;
         }
-        error.value = "Failed to load groups.";
+        error.value = true; // 錯誤訊息顯示在 HTML 模板中
     } finally {
         loading.value = false;
     }

@@ -5,41 +5,41 @@
     <div class="dashboard-container">
       <!-- Search/Add Section -->
       <div class="action-card search-card">
-        <h3>Add Friends</h3>
+        <h3>新增好友</h3>
         <div class="search-box">
-          <input 
-            type="text" 
-            v-model="searchQuery" 
+          <input
+            type="text"
+            v-model="searchQuery"
             @input="handleInput"
-            placeholder="Search by ID or Name..." 
+            placeholder="搜尋 ID 或姓名..."
             class="search-input"
           />
         </div>
-        
+
         <!-- Search Results -->
-        <div v-if="userStore.loading" class="searching-text">Searching...</div>
-        
+        <div v-if="userStore.loading" class="searching-text">搜尋中...</div>
+
         <div v-if="userStore.searchResults.length > 0" class="search-results">
             <div v-for="user in userStore.searchResults" :key="user.id" class="result-item">
                 <span class="result-name">{{ user.name }} (@{{ user.username }})</span>
-                <button 
-                  class="add-btn" 
+                <button
+                  class="add-btn"
                   @click="addFriend(user.id)"
                   :disabled="isFriend(user.id)"
                 >
-                  {{ isFriend(user.id) ? 'Added' : 'Add' }}
+                  {{ isFriend(user.id) ? '已新增' : '新增' }}
                 </button>
             </div>
         </div>
         <div v-else-if="searchQuery && !userStore.loading && userStore.searchResults.length === 0" class="no-results">
-            No users found.
+            找不到使用者。
         </div>
       </div>
 
       <!-- Friends List -->
       <div class="friends-list-section">
-        <h3>My Friends ({{ userStore.friends.length }})</h3>
-        
+        <h3>我的好友（{{ userStore.friends.length }}）</h3>
+
         <div class="friends-grid">
             <div v-for="friend in userStore.friends" :key="friend.id" class="friend-card">
                 <div class="friend-avatar">{{ friend.name.charAt(0).toUpperCase() }}</div>
@@ -48,9 +48,9 @@
                     <div class="friend-username">@{{ friend.username }}</div>
                 </div>
             </div>
-            
+
             <div v-if="userStore.friends.length === 0" class="empty-state">
-                You haven't added any friends yet.
+                您還沒有新增任何好友。
             </div>
         </div>
       </div>
@@ -85,11 +85,11 @@ const handleInput = () => {
 const addFriend = async (id) => {
     try {
         await userStore.addFriend(id);
-        toastStore.addToast('Friend added!', 'success');
+        toastStore.addToast('好友已新增！', 'success');
         searchQuery.value = '';
         userStore.clearSearch();
     } catch (err) {
-        toastStore.addToast(err.response?.data?.error || 'Failed to add friend', 'error');
+        toastStore.addToast(err.response?.data?.error || '新增好友失敗', 'error');
     }
 };
 
